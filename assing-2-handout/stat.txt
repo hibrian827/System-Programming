@@ -1,0 +1,36 @@
+*** basic model
+
+-- short1
+trace  valid  util     ops      secs  Kops
+ 0       yes   50%      12  0.000000120000
+Total          50%      12  0.000000120000
+
+Perf index = 30 (util) + 40 (thru) = 70/100
+
+-- short2
+trace  valid  util     ops      secs  Kops
+ 0       yes  100%      12  0.000000   inf
+Total         100%      12  0.000000   inf
+
+Perf index = 60 (util) + 40 (thru) = 100/100
+
+-- short3
+trace  valid  util     ops      secs  Kops
+ 0       yes   54%      16  0.000000   inf
+Total          54%      16  0.000000   inf
+
+Perf index = 32 (util) + 40 (thru) = 72/100
+
+-- short4
+trace  valid  util     ops      secs  Kops
+ 0       yes   70%      12  0.000000 60000
+Total          70%      12  0.000000 60000
+
+Perf index = 42 (util) + 40 (thru) = 82/100
+
+-- short5
+trace  valid  util     ops      secs  Kops
+ 0       yes    5%     350  0.000002145833
+Total           5%     350  0.000002145833
+
+Perf index = 3 (util) + 40 (thru) = 43/100
