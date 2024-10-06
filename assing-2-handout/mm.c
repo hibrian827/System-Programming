@@ -90,54 +90,31 @@ static int mm_check()
   return 0;
 }
 
+// TODO
 static void* coalesce(void * bp)
 {
-  // size_t size = GET_SIZE(bp);
-  // void *next = NEXT_BLKP(bp);
-  // void *prev = PREV_BLKP(bp);
-  // if(GET_ALLOC(next) == 0 && GET_ALLOC(prev) == 0)
-  // {
-  //   size += GET_SIZE(prev) + GET_SIZE(next);
-  //   PUT(HDRP(prev), PACK(size, 0));
-  //   PUT(FTRP(next), PACK(size, 0));
-  //   bp = prev;
-  // }
-  // else if(GET_ALLOC(next) == 0)
-  // {
-  //   size += GET_SIZE(next);
-  //   PUT(HDRP(bp), PACK(size, 0));
-  //   PUT(FTRP(next), PACK(size, 0));
-  // }
-  // else if(GET_ALLOC(prev) == 0)
-  // {
-  //   size += GET_SIZE(prev);
-  //   PUT(HDRP(prev), PACK(size, 0));
-  //   PUT(FTRP(bp), PACK(size, 0));
-  //   bp = prev;
-  // }
-  // return bp;
-  size_t prev_alloc = GET_ALLOC(FTRP(PREV_BLKP(bp)));
-  size_t next_alloc = GET_ALLOC(HDRP(NEXT_BLKP(bp)));
   size_t size = GET_SIZE(HDRP(bp));
-
-  if (prev_alloc && next_alloc) return bp;
-  else if (prev_alloc && !next_alloc) { 
-    size += GET_SIZE(HDRP(NEXT_BLKP(bp)));
+  void *next = NEXT_BLKP(bp);
+  void *prev = PREV_BLKP(bp);
+  if(GET_ALLOC(HDRP(next)) == 0 && GET_ALLOC(HDRP(prev)) == 0)
+  {
+    size += GET_SIZE(HDRP(prev)) + GET_SIZE(HDRP(next));
+    PUT(HDRP(prev), PACK(size, 0));
+    PUT(FTRP(next), PACK(size, 0));
+    bp = prev;
+  }
+  else if(GET_ALLOC(HDRP(next)) == 0)
+  {
+    size += GET_SIZE(HDRP(next));
     PUT(HDRP(bp), PACK(size, 0));
-    PUT(FTRP(bp), PACK(size,0));
+    PUT(FTRP(next), PACK(size, 0));
   }
-  else if (!prev_alloc && next_alloc) {
-    size += GET_SIZE(HDRP(PREV_BLKP(bp)));
+  else if(GET_ALLOC(HDRP(prev)) == 0)
+  {
+    size += GET_SIZE(HDRP(prev));
+    PUT(HDRP(prev), PACK(size, 0));
     PUT(FTRP(bp), PACK(size, 0));
-    PUT(HDRP(PREV_BLKP(bp)), PACK(size, 0));
-    bp = PREV_BLKP(bp);
-  }
-  else { /* Case 4 */
-    size += GET_SIZE(HDRP(PREV_BLKP(bp))) +
-    GET_SIZE(FTRP(NEXT_BLKP(bp)));
-    PUT(HDRP(PREV_BLKP(bp)), PACK(size, 0));
-    PUT(FTRP(NEXT_BLKP(bp)), PACK(size, 0));
-    bp = PREV_BLKP(bp);
+    bp = prev;
   }
   return bp;
 }
@@ -157,6 +134,7 @@ static void* extend_heap(size_t words)
   return coalesce(bp);
 }
 
+// TODO
 static void* find_fit(size_t asize)
 {
   void* bp;
@@ -221,7 +199,8 @@ void *mm_malloc(size_t size)
 {
   char* bp;
   size_t asize = ALIGN(size + DSIZE);
-  size_t extend_size = MAX(asize, CHUNKSIZE);
+  // size_t extend_size = MAX(asize, CHUNKSIZE);
+  size_t extend_size = asize;
   
   if(size == 0) return NULL;
   
