@@ -31,7 +31,7 @@
 // define
 #define WSIZE             4
 #define DSIZE             8
-#define CHUNKSIZE         (1<<12)
+#define CHUNKSIZE         (1 << 12)
 
 #define MAX(x, y)         ((x) > (y) ? (x) : (y))
 
@@ -53,11 +53,11 @@
 static char *heap_listp;
 
 // static method
-static void* coalesce(char * bp)
+static void* coalesce(void * bp)
 {
   size_t size = GET_SIZE(bp);
-  char *next = NEXT_BLKP(bp);
-  char *prev = PREV_BLKP(bp);
+  void *next = NEXT_BLKP(bp);
+  void *prev = PREV_BLKP(bp);
   if(GET_ALLOC(next) == 0 && GET_ALLOC(prev) == 0)
   {
     size += GET_SIZE(prev) + GET_SIZE(next);
@@ -86,7 +86,7 @@ static void* extend_heap(size_t words)
   char * bp;
   size_t size;
 
-  size = (words % 2) ? (words + 1) * WSIZE : words * WSIZE;
+  size = (words % 2 == 1) ? (words + 1) * WSIZE : words * WSIZE;
   if((long)(bp = mem_sbrk(size) == -1)) return NULL;
   PUT(HDRP(bp), PACK(size, 0));
   PUT(FTRP(bp), PACK(size, 0));
@@ -95,12 +95,41 @@ static void* extend_heap(size_t words)
   return coalesce(bp);
 }
 
+static void* find_fit(size_t asize)
+{
+  void * bp;
+  for(bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp))
+  {
+    if(GET_ALLOC(HDRP(bp)) == 0 && GET_SIZE(HDRP(bp) >= asize)) return bp;
+  }
+  return NULL;
+}
+
+static void place(void *bp, size_t asize)
+{
+  size_t csize = GET_SIZE(HDRP(bp));
+  if((csize - asize) >= 2 * DSIZE)
+  {
+    PUT(HDRP(bp), PACK(asize, 1));
+    PUT(FTRP(bp), PACK(asize, 1));
+    bp = NEXT_BLKP(bp);
+    PUT(HDRP(bp), PACK(csize-asize, 0));
+    PUT(FTRP(bp), PACK(csize-asize, 0));
+    
+  }
+  else{
+    PUT(HDRP(bp), PACK(asize, 1));
+    PUT(FTRP(bp), PACK(asize, 1));
+  }
+}
+
 /* 
  * mm_init - initialize the malloc package.
  */
 int mm_init(void)
 {
-  if(heap_listp = mem_sbrk(4 * WSIZE) == (void *) -1) return -1;
+  heap_listp = mem_sbrk(4 * WSIZE);
+  if(heap_listp == (void *) -1) return -1;
   PUT(heap_listp, 0);
   PUT(heap_listp + WSIZE, PACK(DSIZE, 1));
   PUT(heap_listp + DSIZE, PACK(DSIZE, 1));
