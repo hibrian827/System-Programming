@@ -28,9 +28,40 @@ Total          70%      12  0.000000 60000
 
 Perf index = 42 (util) + 40 (thru) = 82/100
 
+
+*** implicit model
+
+-- short1
+trace  valid  util     ops      secs  Kops
+ 0       yes   74%      12  0.000000 30000
+Total          74%      12  0.000000 30000
+
+Perf index = 45 (util) + 40 (thru) = 85/100
+
+-- short2
+trace  valid  util     ops      secs  Kops
+ 0       yes   40%      12  0.000000 60000
+Total          40%      12  0.000000 60000
+
+Perf index = 24 (util) + 40 (thru) = 64/100
+
+-- short3
+trace  valid  util     ops      secs  Kops
+ 0       yes   20%      16  0.000000 40000
+Total          20%      16  0.000000 40000
+
+Perf index = 12 (util) + 40 (thru) = 52/100
+
+-- short4
+trace  valid  util     ops      secs  Kops
+ 0       yes   48%      12  0.000001 17143
+Total          48%      12  0.000001 17143
+
+Perf index = 29 (util) + 40 (thru) = 69/100
+
 -- short5
 trace  valid  util     ops      secs  Kops
- 0       yes    5%     350  0.000002145833
-Total           5%     350  0.000002145833
+ 0       yes   59%     250  0.000005 52083
+Total          59%     250  0.000005 52083
 
-Perf index = 3 (util) + 40 (thru) = 43/100
+Perf index = 35 (util) + 40 (thru) = 75/100
