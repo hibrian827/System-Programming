@@ -1,67 +1,27 @@
 *** basic model
 
--- short1
-trace  valid  util     ops      secs  Kops
- 0       yes   50%      12  0.000000120000
-Total          50%      12  0.000000120000
-
-Perf index = 30 (util) + 40 (thru) = 70/100
-
--- short2
-trace  valid  util     ops      secs  Kops
- 0       yes  100%      12  0.000000   inf
-Total         100%      12  0.000000   inf
-
-Perf index = 60 (util) + 40 (thru) = 100/100
-
--- short3
-trace  valid  util     ops      secs  Kops
- 0       yes   54%      16  0.000000   inf
-Total          54%      16  0.000000   inf
-
-Perf index = 32 (util) + 40 (thru) = 72/100
-
--- short4
-trace  valid  util     ops      secs  Kops
- 0       yes   70%      12  0.000000 60000
-Total          70%      12  0.000000 60000
-
-Perf index = 42 (util) + 40 (thru) = 82/100
+(impossible to test - takes up too much memory)
 
 
 *** implicit model
 
--- short1
 trace  valid  util     ops      secs  Kops
- 0       yes   74%      12  0.000000 30000
-Total          74%      12  0.000000 30000
+ 0       yes   99%    5694  0.005748   991
+ 1       yes   99%    5848  0.005328  1098
+ 2       yes   99%    6648  0.008691   765
+ 3       yes  100%    5380  0.006546   822
+ 4       yes   40%   14400  0.000068212703
+ 5       yes   92%    4800  0.005614   855
+ 6       yes   92%    4800  0.005237   917
+ 7       yes   55%   12000  0.127669    94
+ 8       yes   51%   24000  0.225750   106
+ 9       yes   18%   14401  0.053470   269
+10       yes   46%   14401  0.001777  8105
+11       yes   40%      12  0.000000 60000
+12       yes   89%      12  0.000000 60000
+Total          71%  112396  0.445899   252
 
-Perf index = 45 (util) + 40 (thru) = 85/100
+Perf index = 42 (util) + 17 (thru) = 59/100
 
--- short2
-trace  valid  util     ops      secs  Kops
- 0       yes   40%      12  0.000000 60000
-Total          40%      12  0.000000 60000
+*** segregated model
 
-Perf index = 24 (util) + 40 (thru) = 64/100
-
--- short3
-trace  valid  util     ops      secs  Kops
- 0       yes   20%      16  0.000000 40000
-Total          20%      16  0.000000 40000
-
-Perf index = 12 (util) + 40 (thru) = 52/100
-
--- short4
-trace  valid  util     ops      secs  Kops
- 0       yes   48%      12  0.000001 17143
-Total          48%      12  0.000001 17143
-
-Perf index = 29 (util) + 40 (thru) = 69/100
-
--- short5
-trace  valid  util     ops      secs  Kops
- 0       yes   59%     250  0.000005 52083
-Total          59%     250  0.000005 52083
-
-Perf index = 35 (util) + 40 (thru) = 75/100

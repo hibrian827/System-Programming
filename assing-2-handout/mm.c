@@ -49,10 +49,10 @@
 #define NEXT_BLKP(bp)         ((char *)(bp) + GET_SIZE((char *)(bp) - WSIZE))
 #define PREV_BLKP(bp)         ((char *)(bp) - GET_SIZE((char *)(bp) - DSIZE))
 
-#define GET_PREV_FREE(bp)     (*(unsigned long *) (bp))
-#define GET_NEXT_FREE(bp)     (*(unsigned long *) (bp + DSIZE))
-#define SET_PREV_FREE(bp, p)  (*(unsigned long *) (bp) = (p))
-#define SET_NEXT_FREE(bp, p)  (*(unsigned long *) (bp + DSIZE) = (p))
+#define GET_PREV_FREE(bp)     (void *)(*(unsigned long *) (bp))
+#define GET_NEXT_FREE(bp)     (void *)(*(unsigned long *) (bp + DSIZE))
+#define SET_PREV_FREE(bp, p)  (*(unsigned long *) (bp) = (long)(p))
+#define SET_NEXT_FREE(bp, p)  (*(unsigned long *) (bp + DSIZE) = (long)(p))
 
 #define SIZE_NUM 4
 
@@ -96,26 +96,145 @@ static int mm_check()
   }
   void * end_p = mem_heap_hi();
   printf("heap ends in %p\n\n", end_p);
+  // print free list
   printf("free list:\n");
   for(int i = 0; i < SIZE_NUM; i++) {
-    printf("%5d : %p\n", size_class[i], free_list[i]);
+    void * temp = free_list[i];
+    printf("%5d :", size_class[i]);
+    while(temp) {
+      printf(" %p", temp);
+      temp = GET_NEXT_FREE(temp);
+    }
+    printf("\n");
   }
-  printf("large : %p\n\n", free_list[SIZE_NUM]);
+  void * temp = free_list[SIZE_NUM];
+  printf("large :");
+  while(temp) {
+    printf(" %p", temp);
+    temp = GET_NEXT_FREE(temp);
+  }
+  printf("\n");
   printf("\n\n*************** ending heap check ***************\n\n");
   return 0;
 }
 
 static void add_free(void *bp) {
+  // --------------------- DEBUG ---------------------
+  printf("adding %p to free list\n", bp);
+  // -------------------------------------------------
   size_t size = GET_SIZE(HDRP(bp));
+  // TODO : change this later 
   for(int i = 0; i < SIZE_NUM; i++) {
     if(size <= size_class[i]) {
       void *ptr = free_list[i];
-      // TODO: need fixing
-      while(ptr) ptr = GET_NEXT_FREE(ptr);
-      free_list[i] = bp;
+      if(ptr != NULL){
+        while(GET_NEXT_FREE(ptr)) ptr = GET_NEXT_FREE(ptr);
+        SET_NEXT_FREE(ptr, bp);
+        SET_PREV_FREE(bp, ptr);
+      }
+      else {
+        free_list[i] = bp;
+        SET_NEXT_FREE(bp, 0);
+        SET_PREV_FREE(bp, 0);
+      }
+      // --------------------- DEBUG ---------------------
+      printf("added %p to free list\n", bp);
+      // -------------------------------------------------
       return;
     }
   }
+  void *ptr = free_list[SIZE_NUM];
+  if(ptr != NULL){
+    while(GET_NEXT_FREE(ptr)) ptr = GET_NEXT_FREE(ptr);
+    SET_NEXT_FREE(ptr, bp);
+    SET_PREV_FREE(bp, ptr);
+  }
+  else free_list[SIZE_NUM] = bp;
+  // --------------------- DEBUG ---------------------
+  printf("added %p to free list\n", bp);
+  // -------------------------------------------------
+  return;
+}
+
+static void remove_free(void *bp) {
+  // --------------------- DEBUG ---------------------
+  printf("removing %p from free list\n", bp);
+  // mm_check();
+  // -------------------------------------------------
+  size_t size = GET_SIZE(HDRP(bp));
+  // TODO : change this later 
+  for(int i = 0; i < SIZE_NUM; i++) {
+    if(size <= size_class[i]) {
+      void *ptr = free_list[i];
+      // --------------------- DEBUG ---------------------
+      // printf("0\n");
+      // printf("%d %p\n", size_class[i], ptr);
+      // -------------------------------------------------
+      void *prev = NULL;
+      void *next = GET_NEXT_FREE(ptr);
+      // --------------------- DEBUG ---------------------
+      // printf("1\n");
+      // -------------------------------------------------
+      while(ptr != bp) {
+        prev = ptr;
+        ptr = GET_NEXT_FREE(ptr);
+        next = GET_NEXT_FREE(ptr);
+      }
+      // --------------------- DEBUG ---------------------
+      // printf("2\n");
+      // -------------------------------------------------
+      // alone
+      if(prev == NULL && next == NULL) {
+        free_list[i] = NULL;
+      }
+      // first
+      else if(prev == NULL) {
+        SET_PREV_FREE(next, 0);
+      }
+      // last
+      else if(next == NULL) {
+        SET_NEXT_FREE(prev, 0);
+      }
+      // middle
+      else {
+        SET_PREV_FREE(next, prev);
+        SET_NEXT_FREE(prev, next);
+      }
+      // --------------------- DEBUG ---------------------
+      printf("removed %p from free list\n", bp);
+      // -------------------------------------------------
+      return;
+    }
+  }
+  void *ptr = free_list[SIZE_NUM];
+  void *prev = NULL;
+  void *next = GET_NEXT_FREE(ptr);
+  while(ptr != bp) {
+    prev = ptr;
+    ptr = GET_NEXT_FREE(ptr);
+    next = GET_NEXT_FREE(ptr);
+  }
+  // alone
+  if(prev == NULL && next == NULL) {
+    free_list[SIZE_NUM] = NULL;
+  }
+  // first
+  else if(prev == NULL) {
+    SET_PREV_FREE(next, 0);
+  }
+  // last
+  else if(next == NULL) {
+    SET_NEXT_FREE(prev, 0);
+  }
+  // middle
+  else {
+    SET_PREV_FREE(next, prev);
+    SET_NEXT_FREE(prev, next);
+  }
+  // --------------------- DEBUG ---------------------
+  printf("removed %p from free list\n", bp);
+  // -------------------------------------------------
+  return;
 }
 
 // TODO
@@ -127,6 +246,8 @@ static void* coalesce(void * bp)
   if(GET_ALLOC(HDRP(next)) == 0 && GET_ALLOC(HDRP(prev)) == 0)
   {
     size += GET_SIZE(HDRP(prev)) + GET_SIZE(HDRP(next));
+    remove_free(prev);
+    remove_free(next);
     PUT(HDRP(prev), PACK(size, 0));
     PUT(FTRP(next), PACK(size, 0));
     bp = prev;
@@ -134,12 +255,14 @@ static void* coalesce(void * bp)
   else if(GET_ALLOC(HDRP(next)) == 0)
   {
     size += GET_SIZE(HDRP(next));
+    remove_free(next);
     PUT(HDRP(bp), PACK(size, 0));
     PUT(FTRP(next), PACK(size, 0));
   }
   else if(GET_ALLOC(HDRP(prev)) == 0)
   {
     size += GET_SIZE(HDRP(prev));
+    remove_free(prev);
     PUT(HDRP(prev), PACK(size, 0));
     PUT(FTRP(bp), PACK(size, 0));
     bp = prev;
@@ -152,7 +275,6 @@ static void* extend_heap(size_t words)
 {
   char * bp;
   size_t size;
-
   size = (words % 2 == 1) ? (words + 1) * WSIZE : words * WSIZE;
   bp = mem_sbrk(size);
   if((long)(bp) == -1) return NULL;
@@ -160,6 +282,9 @@ static void* extend_heap(size_t words)
   PUT(FTRP(bp), PACK(size, 0));
   PUT(HDRP(NEXT_BLKP(bp)), PACK(0, 1));
 
+  // --------------------- DEBUG ---------------------
+  printf("extended heap\n");
+  // -------------------------------------------------
   return coalesce(bp);
 }
 
@@ -177,23 +302,26 @@ static void* find_fit(size_t asize)
 static void place(void *bp, size_t asize)
 {
   // --------------------- DEBUG ---------------------
-  // printf("[ACTION] allocated %d to %p\n", asize, bp);
+  printf("[ACTION] allocated %d to %p\n", asize, bp);
   // -------------------------------------------------
   size_t csize = GET_SIZE(HDRP(bp));
   if((csize - asize) >= 2 * DSIZE)
   {
+    remove_free(bp);
     PUT(HDRP(bp), PACK(asize, 1));
     PUT(FTRP(bp), PACK(asize, 1));
     bp = NEXT_BLKP(bp);
     PUT(HDRP(bp), PACK(csize-asize, 0));
     PUT(FTRP(bp), PACK(csize-asize, 0));
+    add_free(bp);
   }
   else{
+    remove_free(bp);
     PUT(HDRP(bp), PACK(csize, 1));
     PUT(FTRP(bp), PACK(csize, 1));
   }
   // --------------------- DEBUG ---------------------
-  // mm_check();
+  mm_check();
   // -------------------------------------------------
 }
 
@@ -203,8 +331,9 @@ static void place(void *bp, size_t asize)
 int mm_init(void)
 {
   // --------------------- DEBUG ---------------------
-  // printf("----------------------------- starting initialization -----------------------------\n\n");
+  printf("----------------------------- starting initialization -----------------------------\n\n");
   // -------------------------------------------------
+  for(int i = 0; i <= SIZE_NUM; i++) free_list[i] = 0;
   heap_listp = mem_sbrk(4 * WSIZE);
   if(heap_listp == (void *) -1) return -1;
   PUT(heap_listp, 0);
@@ -213,9 +342,8 @@ int mm_init(void)
   PUT(heap_listp + 3 * WSIZE, PACK(0, 1));
   heap_listp += 2 * WSIZE;
   if(extend_heap(CHUNKSIZE / WSIZE) == NULL) return -1;
-  for(int i = 0; i <= SIZE_NUM; i++) free_list[i] = 0;
   // --------------------- DEBUG ---------------------
-  // mm_check();
+  mm_check();
   // -------------------------------------------------
   return 0;
 }
@@ -226,6 +354,9 @@ int mm_init(void)
  */
 void *mm_malloc(size_t size)
 {
+  // --------------------- DEBUG ---------------------
+  printf("[ACTION] allocating %d\n", size);
+  // -------------------------------------------------
   char* bp;
   size_t asize = ALIGN(MAX(size, 16) + DSIZE);
   // size_t extend_size = MAX(asize, CHUNKSIZE);
@@ -251,7 +382,7 @@ void *mm_malloc(size_t size)
 void mm_free(void *ptr)
 {
   // --------------------- DEBUG ---------------------
-  // printf("[ACTION] freeing %p\n", ptr);
+  printf("[ACTION] freeing %p\n", ptr);
   // -------------------------------------------------
   if(ptr == NULL) return;
   size_t size = GET_SIZE(HDRP(ptr));
@@ -261,8 +392,8 @@ void mm_free(void *ptr)
   SET_NEXT_FREE(ptr, 0);
   coalesce(ptr);
   // --------------------- DEBUG ---------------------
-  // printf("[ACTION] freed %p\n", ptr);
-  // mm_check();
+  printf("[ACTION] freed %p\n", ptr);
+  mm_check();
   // -------------------------------------------------
 }
 
@@ -272,7 +403,7 @@ void mm_free(void *ptr)
 void *mm_realloc(void *ptr, size_t size)
 {
   // --------------------- DEBUG ---------------------
-  // printf("[ACTION] reallocating %p to %d\n", ptr, size);
+  printf("[ACTION] reallocating %p to %d\n", ptr, size);
   // -------------------------------------------------
   void *oldptr = ptr;
   void *newptr;
@@ -287,7 +418,7 @@ void *mm_realloc(void *ptr, size_t size)
   if(newptr == NULL) return NULL;
   if(oldptr == NULL) return newptr;
   
-  copySize = GET_SIZE(oldptr);
+  copySize = GET_SIZE(oldptr) - DSIZE;
   if (size < copySize) copySize = size;
   memcpy(newptr, oldptr, copySize);
   mm_free(oldptr);
