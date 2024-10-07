@@ -19,38 +19,48 @@
 #include "memlib.h"
 
 /* single word (4) or double word (8) alignment */
-#define ALIGNMENT         8
+#define ALIGNMENT             8
 
 /* rounds up to the nearest multiple of ALIGNMENT */
-#define ALIGN(size)       (((size) + (ALIGNMENT-1)) & ~0x7)
+#define ALIGN(size)           (((size) + (ALIGNMENT-1)) & ~0x7)
 
 
-#define SIZE_T_SIZE       (ALIGN(sizeof(size_t)))
+#define SIZE_T_SIZE           (ALIGN(sizeof(size_t)))
 
 
 // define
-#define WSIZE             4
-#define DSIZE             8
-#define CHUNKSIZE         (1 << 12)
+#define WSIZE                 4
+#define DSIZE                 8
+#define CHUNKSIZE             (1 << 12)
 
-#define MAX(x, y)         ((x) > (y) ? (x) : (y))
+#define MAX(x, y)             ((x) > (y) ? (x) : (y))
 
-#define PACK(size, alloc) ((size) | (alloc))
+#define PACK(size, alloc)     ((size) | (alloc))
 
-#define GET(p)            (*(unsigned int *) (p))
-#define PUT(p, val)       (*(unsigned int *) (p) = (val))
+#define GET(p)                (*(unsigned int *) (p))
+#define PUT(p, val)           (*(unsigned int *) (p) = (val))
 
-#define GET_SIZE(p)       (GET(p) & ~0x7)
-#define GET_ALLOC(p)      (GET(p) & 0x1)
+#define GET_SIZE(p)           (GET(p) & ~0x7)
+#define GET_ALLOC(p)          (GET(p) & 0x1)
 
-#define HDRP(bp)          ((char *)(bp) - WSIZE)
-#define FTRP(bp)          ((char *)(bp) + GET_SIZE(HDRP(bp)) - DSIZE)
+#define HDRP(bp)              ((char *)(bp) - WSIZE)
+#define FTRP(bp)              ((char *)(bp) + GET_SIZE(HDRP(bp)) - DSIZE)
 
-#define NEXT_BLKP(bp)     ((char *)(bp) + GET_SIZE((char *)(bp) - WSIZE))
-#define PREV_BLKP(bp)     ((char *)(bp) - GET_SIZE((char *)(bp) - DSIZE))
+#define NEXT_BLKP(bp)         ((char *)(bp) + GET_SIZE((char *)(bp) - WSIZE))
+#define PREV_BLKP(bp)         ((char *)(bp) - GET_SIZE((char *)(bp) - DSIZE))
+
+#define GET_PREV_FREE(bp)     (*(unsigned long *) (bp))
+#define GET_NEXT_FREE(bp)     (*(unsigned long *) (bp + DSIZE))
+#define SET_PREV_FREE(bp, p)  (*(unsigned long *) (bp) = (p))
+#define SET_NEXT_FREE(bp, p)  (*(unsigned long *) (bp + DSIZE) = (p))
+
+#define SIZE_NUM 4
 
 // static variable
 static char *heap_listp;
+
+static int size_class[SIZE_NUM] = {1 << 4, 1 << 8, 1 << 12, 1 << 16};
+static void* free_list[SIZE_NUM + 1];
 
 // static method
 static int mm_check()
@@ -78,16 +88,34 @@ static int mm_check()
       return -1;
     }
     // check coalescing
-    if(wasFree && GET_ALLOC(HDRP(bp)) == 0){
+    if(wasFree && GET_ALLOC(HDRP(bp)) == 0) {
       printf("!!! coalesce failed !!!!\n");
       return -1;
     }
     wasFree = !GET_ALLOC(HDRP(bp));
   }
   void * end_p = mem_heap_hi();
-  printf("heap ends in %p\n", end_p);
+  printf("heap ends in %p\n\n", end_p);
+  printf("free list:\n");
+  for(int i = 0; i < SIZE_NUM; i++) {
+    printf("%5d : %p\n", size_class[i], free_list[i]);
+  }
+  printf("large : %p\n\n", free_list[SIZE_NUM]);
   printf("\n\n*************** ending heap check ***************\n\n");
   return 0;
+}
+
+static void add_free(void *bp) {
+  size_t size = GET_SIZE(HDRP(bp));
+  for(int i = 0; i < SIZE_NUM; i++) {
+    if(size <= size_class[i]) {
+      void *ptr = free_list[i];
+      // TODO: need fixing
+      while(ptr) ptr = GET_NEXT_FREE(ptr);
+      free_list[i] = bp;
+      return;
+    }
+  }
 }
 
 // TODO
@@ -116,6 +144,7 @@ static void* coalesce(void * bp)
     PUT(FTRP(bp), PACK(size, 0));
     bp = prev;
   }
+  add_free(bp);
   return bp;
 }
 
@@ -158,7 +187,6 @@ static void place(void *bp, size_t asize)
     bp = NEXT_BLKP(bp);
     PUT(HDRP(bp), PACK(csize-asize, 0));
     PUT(FTRP(bp), PACK(csize-asize, 0));
-    
   }
   else{
     PUT(HDRP(bp), PACK(csize, 1));
@@ -185,6 +213,7 @@ int mm_init(void)
   PUT(heap_listp + 3 * WSIZE, PACK(0, 1));
   heap_listp += 2 * WSIZE;
   if(extend_heap(CHUNKSIZE / WSIZE) == NULL) return -1;
+  for(int i = 0; i <= SIZE_NUM; i++) free_list[i] = 0;
   // --------------------- DEBUG ---------------------
   // mm_check();
   // -------------------------------------------------
@@ -198,7 +227,7 @@ int mm_init(void)
 void *mm_malloc(size_t size)
 {
   char* bp;
-  size_t asize = ALIGN(size + DSIZE);
+  size_t asize = ALIGN(MAX(size, 16) + DSIZE);
   // size_t extend_size = MAX(asize, CHUNKSIZE);
   size_t extend_size = asize;
   
@@ -228,6 +257,8 @@ void mm_free(void *ptr)
   size_t size = GET_SIZE(HDRP(ptr));
   PUT(HDRP(ptr), PACK(size, 0));
   PUT(FTRP(ptr), PACK(size, 0));
+  SET_PREV_FREE(ptr, 0);
+  SET_NEXT_FREE(ptr, 0);
   coalesce(ptr);
   // --------------------- DEBUG ---------------------
   // printf("[ACTION] freed %p\n", ptr);
