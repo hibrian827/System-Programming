@@ -49,8 +49,8 @@
 #define NEXT_BLKP(bp)         ((char *)(bp) + GET_SIZE((char *)(bp) - WSIZE))
 #define PREV_BLKP(bp)         ((char *)(bp) - GET_SIZE((char *)(bp) - DSIZE))
 
-#define GET_PREV_FREE(bp)     (void *)(*(unsigned long *) (bp))
-#define GET_NEXT_FREE(bp)     (void *)(*(unsigned long *) (bp + DSIZE))
+#define GET_PREV_FREE(bp)     ((void *)(*(unsigned long *) (bp)))
+#define GET_NEXT_FREE(bp)     ((void *)(*(unsigned long *) (bp + DSIZE)))
 #define SET_PREV_FREE(bp, p)  (*(unsigned long *) (bp) = (long)(p))
 #define SET_NEXT_FREE(bp, p)  (*(unsigned long *) (bp + DSIZE) = (long)(p))
 
@@ -119,10 +119,10 @@ static int mm_check()
 }
 
 static void add_free(void *bp) {
-  // --------------------- DEBUG ---------------------
-  printf("adding %p to free list\n", bp);
-  // -------------------------------------------------
   size_t size = GET_SIZE(HDRP(bp));
+  // --------------------- DEBUG ---------------------
+  // printf("adding %p with %d to free list\n", bp, size);
+  // -------------------------------------------------
   // TODO : change this later 
   for(int i = 0; i < SIZE_NUM; i++) {
     if(size <= size_class[i]) {
@@ -130,6 +130,7 @@ static void add_free(void *bp) {
       if(ptr != NULL){
         while(GET_NEXT_FREE(ptr)) ptr = GET_NEXT_FREE(ptr);
         SET_NEXT_FREE(ptr, bp);
+        SET_NEXT_FREE(bp, 0);
         SET_PREV_FREE(bp, ptr);
       }
       else {
@@ -138,7 +139,7 @@ static void add_free(void *bp) {
         SET_PREV_FREE(bp, 0);
       }
       // --------------------- DEBUG ---------------------
-      printf("added %p to free list\n", bp);
+      // printf("added %p to free list\n", bp);
       // -------------------------------------------------
       return;
     }
@@ -147,42 +148,36 @@ static void add_free(void *bp) {
   if(ptr != NULL){
     while(GET_NEXT_FREE(ptr)) ptr = GET_NEXT_FREE(ptr);
     SET_NEXT_FREE(ptr, bp);
+    SET_NEXT_FREE(bp, 0);
     SET_PREV_FREE(bp, ptr);
   }
-  else free_list[SIZE_NUM] = bp;
+  else {
+    free_list[SIZE_NUM] = bp;
+    SET_NEXT_FREE(bp, 0);
+    SET_PREV_FREE(bp, 0);
+  }
   // --------------------- DEBUG ---------------------
-  printf("added %p to free list\n", bp);
+  // printf("added %p to free list\n", bp);
   // -------------------------------------------------
   return;
 }
 
 static void remove_free(void *bp) {
   // --------------------- DEBUG ---------------------
-  printf("removing %p from free list\n", bp);
-  // mm_check();
+  // printf("removing %p from free list\n", bp);
   // -------------------------------------------------
   size_t size = GET_SIZE(HDRP(bp));
   // TODO : change this later 
   for(int i = 0; i < SIZE_NUM; i++) {
     if(size <= size_class[i]) {
       void *ptr = free_list[i];
-      // --------------------- DEBUG ---------------------
-      // printf("0\n");
-      // printf("%d %p\n", size_class[i], ptr);
-      // -------------------------------------------------
       void *prev = NULL;
       void *next = GET_NEXT_FREE(ptr);
-      // --------------------- DEBUG ---------------------
-      // printf("1\n");
-      // -------------------------------------------------
       while(ptr != bp) {
         prev = ptr;
         ptr = GET_NEXT_FREE(ptr);
         next = GET_NEXT_FREE(ptr);
       }
-      // --------------------- DEBUG ---------------------
-      // printf("2\n");
-      // -------------------------------------------------
       // alone
       if(prev == NULL && next == NULL) {
         free_list[i] = NULL;
@@ -190,6 +185,7 @@ static void remove_free(void *bp) {
       // first
       else if(prev == NULL) {
         SET_PREV_FREE(next, 0);
+        free_list[i] = next;
       }
       // last
       else if(next == NULL) {
@@ -201,7 +197,7 @@ static void remove_free(void *bp) {
         SET_NEXT_FREE(prev, next);
       }
       // --------------------- DEBUG ---------------------
-      printf("removed %p from free list\n", bp);
+      // printf("removed %p from free list\n", bp);
       // -------------------------------------------------
       return;
     }
@@ -221,6 +217,7 @@ static void remove_free(void *bp) {
   // first
   else if(prev == NULL) {
     SET_PREV_FREE(next, 0);
+    free_list[SIZE_NUM] = next;
   }
   // last
   else if(next == NULL) {
@@ -232,12 +229,12 @@ static void remove_free(void *bp) {
     SET_NEXT_FREE(prev, next);
   }
   // --------------------- DEBUG ---------------------
-  printf("removed %p from free list\n", bp);
+  // printf("removed %p from free list\n", bp);
   // -------------------------------------------------
   return;
 }
 
-// TODO
+// TODO : maybe change policy?
 static void* coalesce(void * bp)
 {
   size_t size = GET_SIZE(HDRP(bp));
@@ -283,12 +280,12 @@ static void* extend_heap(size_t words)
   PUT(HDRP(NEXT_BLKP(bp)), PACK(0, 1));
 
   // --------------------- DEBUG ---------------------
-  printf("extended heap\n");
+  // printf("extended heap\n");
   // -------------------------------------------------
   return coalesce(bp);
 }
 
-// TODO
+// TODO : optimize
 static void* find_fit(size_t asize)
 {
   void* bp;
@@ -302,10 +299,10 @@ static void* find_fit(size_t asize)
 static void place(void *bp, size_t asize)
 {
   // --------------------- DEBUG ---------------------
-  printf("[ACTION] allocated %d to %p\n", asize, bp);
+  // printf("[ACTION] allocated %d to %p\n", asize, bp);
   // -------------------------------------------------
   size_t csize = GET_SIZE(HDRP(bp));
-  if((csize - asize) >= 2 * DSIZE)
+  if((csize - asize) >= 3 * DSIZE)
   {
     remove_free(bp);
     PUT(HDRP(bp), PACK(asize, 1));
@@ -321,7 +318,7 @@ static void place(void *bp, size_t asize)
     PUT(FTRP(bp), PACK(csize, 1));
   }
   // --------------------- DEBUG ---------------------
-  mm_check();
+  // mm_check();
   // -------------------------------------------------
 }
 
@@ -331,7 +328,7 @@ static void place(void *bp, size_t asize)
 int mm_init(void)
 {
   // --------------------- DEBUG ---------------------
-  printf("----------------------------- starting initialization -----------------------------\n\n");
+  // printf("----------------------------- starting initialization -----------------------------\n\n");
   // -------------------------------------------------
   for(int i = 0; i <= SIZE_NUM; i++) free_list[i] = 0;
   heap_listp = mem_sbrk(4 * WSIZE);
@@ -343,7 +340,7 @@ int mm_init(void)
   heap_listp += 2 * WSIZE;
   if(extend_heap(CHUNKSIZE / WSIZE) == NULL) return -1;
   // --------------------- DEBUG ---------------------
-  mm_check();
+  // mm_check();
   // -------------------------------------------------
   return 0;
 }
@@ -355,7 +352,7 @@ int mm_init(void)
 void *mm_malloc(size_t size)
 {
   // --------------------- DEBUG ---------------------
-  printf("[ACTION] allocating %d\n", size);
+  // printf("[ACTION] allocating %d\n", size);
   // -------------------------------------------------
   char* bp;
   size_t asize = ALIGN(MAX(size, 16) + DSIZE);
@@ -382,7 +379,7 @@ void *mm_malloc(size_t size)
 void mm_free(void *ptr)
 {
   // --------------------- DEBUG ---------------------
-  printf("[ACTION] freeing %p\n", ptr);
+  // printf("[ACTION] freeing %p\n", ptr);
   // -------------------------------------------------
   if(ptr == NULL) return;
   size_t size = GET_SIZE(HDRP(ptr));
@@ -392,8 +389,8 @@ void mm_free(void *ptr)
   SET_NEXT_FREE(ptr, 0);
   coalesce(ptr);
   // --------------------- DEBUG ---------------------
-  printf("[ACTION] freed %p\n", ptr);
-  mm_check();
+  // printf("[ACTION] freed %p\n", ptr);
+  // mm_check();
   // -------------------------------------------------
 }
 
@@ -403,7 +400,7 @@ void mm_free(void *ptr)
 void *mm_realloc(void *ptr, size_t size)
 {
   // --------------------- DEBUG ---------------------
-  printf("[ACTION] reallocating %p to %d\n", ptr, size);
+  // printf("[ACTION] reallocating %p to %d\n", ptr, size);
   // -------------------------------------------------
   void *oldptr = ptr;
   void *newptr;
