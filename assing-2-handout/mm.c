@@ -49,17 +49,17 @@
 #define NEXT_BLKP(bp)         ((char *)(bp) + GET_SIZE((char *)(bp) - WSIZE))
 #define PREV_BLKP(bp)         ((char *)(bp) - GET_SIZE((char *)(bp) - DSIZE))
 
-#define GET_PREV_FREE(bp)     ((void *)(*(unsigned long *) (bp)))
-#define GET_NEXT_FREE(bp)     ((void *)(*(unsigned long *) (bp + DSIZE)))
-#define SET_PREV_FREE(bp, p)  (*(unsigned long *) (bp) = (long)(p))
-#define SET_NEXT_FREE(bp, p)  (*(unsigned long *) (bp + DSIZE) = (long)(p))
+#define GET_PREV_FREE(bp)     ((void *)(*(unsigned int *) (bp)))
+#define GET_NEXT_FREE(bp)     ((void *)(*(unsigned int *) (bp + WSIZE)))
+#define SET_PREV_FREE(bp, p)  (*(unsigned int *) (bp) = (long)(p))
+#define SET_NEXT_FREE(bp, p)  (*(unsigned int *) (bp + WSIZE) = (long)(p))
 
-#define SIZE_NUM 9
+#define SIZE_NUM 10
 
 // static variable
 static char *heap_listp;
 
-static int size_class[SIZE_NUM] = {1 << 5, 1 << 6, 1 << 7, 1 << 8, 1 << 9, 1 << 10, 1 << 11, 1 << 12, 1 << 13};
+static int size_class[SIZE_NUM] = {1 << 5, 1 << 6, 1 << 7, 1 << 8, 1 << 9, 1 << 10, 1 << 11, 1 << 12, 1 << 13, 1 << 14};
 static void* free_list[SIZE_NUM + 1];
 
 // static method
@@ -118,7 +118,8 @@ static int mm_check()
   return 0;
 }
 
-static int get_class(int size) {
+static int get_class(int asize) {
+  int size = asize - DSIZE;
   for(int i = 0; i < SIZE_NUM; i++) if(size <= size_class[i]) return i;
   return SIZE_NUM;
 }
@@ -260,7 +261,7 @@ static void place(void *bp, size_t asize)
   // printf("[ACTION] allocated %d to %p\n", asize, bp);
   // -------------------------------------------------
   size_t csize = GET_SIZE(HDRP(bp));
-  if((csize - asize) >= 3 * DSIZE)
+  if((csize - asize) >= 2 * DSIZE)
   {
     remove_free(bp);
     PUT(HDRP(bp), PACK(asize, 1));
@@ -296,6 +297,7 @@ int mm_init(void)
   PUT(heap_listp + DSIZE, PACK(DSIZE, 1));
   PUT(heap_listp + 3 * WSIZE, PACK(0, 1));
   heap_listp += 2 * WSIZE;
+  if(extend_heap(DSIZE) == NULL) return -1;
   if(extend_heap(CHUNKSIZE / WSIZE) == NULL) return -1;
   // --------------------- DEBUG ---------------------
   // mm_check();
@@ -313,7 +315,7 @@ void *mm_malloc(size_t size)
   // printf("[ACTION] allocating %d\n", size);
   // -------------------------------------------------
   char* bp;
-  size_t asize = ALIGN(MAX(size, 16) + DSIZE);
+  size_t asize = ALIGN(MAX(size + DSIZE, 16));
   size_t extend_size = MAX(asize, CHUNKSIZE);
   // size_t extend_size = asize;
   
@@ -325,7 +327,7 @@ void *mm_malloc(size_t size)
     place(bp, asize);
     return bp;
   }
-  bp = extend_heap(extend_size); 
+  bp = extend_heap(extend_size / WSIZE); 
   if(bp == NULL) return NULL;
   place(bp, asize);
   return bp;
@@ -360,22 +362,40 @@ void *mm_realloc(void *ptr, size_t size)
   // --------------------- DEBUG ---------------------
   // printf("[ACTION] reallocating %p to %d\n", ptr, size);
   // -------------------------------------------------
-  void *oldptr = ptr;
   void *newptr;
-  size_t copySize;
-  
+  if(ptr == NULL){
+    newptr = mm_malloc(size);
+    return newptr;
+  }
   if(size == 0){
-    mm_free(oldptr);
+    mm_free(ptr);
     return NULL;
   }
-
-  newptr = mm_malloc(size);
-  if(newptr == NULL) return NULL;
-  if(oldptr == NULL) return newptr;
   
-  copySize = GET_SIZE(oldptr) - DSIZE;
-  if (size < copySize) copySize = size;
-  memcpy(newptr, oldptr, copySize);
-  mm_free(oldptr);
+  size_t asize = ALIGN(MAX(size + DSIZE, 16));
+  size_t oldSize = GET_SIZE(HDRP(ptr));
+  size_t copySize = oldSize - DSIZE;
+  if(oldSize > asize && (oldSize - asize) >= 2 * DSIZE) {
+    PUT(HDRP(ptr), PACK(asize, 1));
+    PUT(FTRP(ptr), PACK(asize, 1));
+    newptr = ptr;
+    ptr = NEXT_BLKP(ptr);
+    PUT(HDRP(ptr), PACK(oldSize-asize, 0));
+    PUT(FTRP(ptr), PACK(oldSize-asize, 0));
+    SET_PREV_FREE(ptr, 0);
+    SET_NEXT_FREE(ptr, 0);
+    coalesce(ptr);
+  }
+  else {
+    newptr = mm_malloc(size);
+    if(newptr == NULL) return NULL;
+    if(size < copySize) copySize = size;
+    memcpy(newptr, ptr, copySize);
+    mm_free(ptr);
+  }
+  // --------------------- DEBUG ---------------------
+  // printf("[ACTION] reallocated %p to %d\n", ptr, size);
+  // mm_check();
+  // -------------------------------------------------
   return newptr;
 }
