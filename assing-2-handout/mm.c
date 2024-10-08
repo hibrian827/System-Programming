@@ -54,12 +54,12 @@
 #define SET_PREV_FREE(bp, p)  (*(unsigned long *) (bp) = (long)(p))
 #define SET_NEXT_FREE(bp, p)  (*(unsigned long *) (bp + DSIZE) = (long)(p))
 
-#define SIZE_NUM 4
+#define SIZE_NUM 9
 
 // static variable
 static char *heap_listp;
 
-static int size_class[SIZE_NUM] = {1 << 4, 1 << 8, 1 << 12, 1 << 16};
+static int size_class[SIZE_NUM] = {1 << 5, 1 << 6, 1 << 7, 1 << 8, 1 << 9, 1 << 10, 1 << 11, 1 << 12, 1 << 13};
 static void* free_list[SIZE_NUM + 1];
 
 // static method
@@ -118,41 +118,32 @@ static int mm_check()
   return 0;
 }
 
+static int get_class(int size) {
+  for(int i = 0; i < SIZE_NUM; i++) if(size <= size_class[i]) return i;
+  return SIZE_NUM;
+}
+
 static void add_free(void *bp) {
-  size_t size = GET_SIZE(HDRP(bp));
   // --------------------- DEBUG ---------------------
-  // printf("adding %p with %d to free list\n", bp, size);
+  // printf("adding %p with %d to free list\n", bp, GET_SIZE(HDRP(bp)));
   // -------------------------------------------------
-  // TODO : change this later 
-  for(int i = 0; i < SIZE_NUM; i++) {
-    if(size <= size_class[i]) {
-      void *ptr = free_list[i];
-      if(ptr != NULL){
-        while(GET_NEXT_FREE(ptr)) ptr = GET_NEXT_FREE(ptr);
-        SET_NEXT_FREE(ptr, bp);
-        SET_NEXT_FREE(bp, 0);
-        SET_PREV_FREE(bp, ptr);
-      }
-      else {
-        free_list[i] = bp;
-        SET_NEXT_FREE(bp, 0);
-        SET_PREV_FREE(bp, 0);
-      }
-      // --------------------- DEBUG ---------------------
-      // printf("added %p to free list\n", bp);
-      // -------------------------------------------------
-      return;
-    }
-  }
-  void *ptr = free_list[SIZE_NUM];
-  if(ptr != NULL){
-    while(GET_NEXT_FREE(ptr)) ptr = GET_NEXT_FREE(ptr);
-    SET_NEXT_FREE(ptr, bp);
-    SET_NEXT_FREE(bp, 0);
-    SET_PREV_FREE(bp, ptr);
+  size_t size = GET_SIZE(HDRP(bp));
+  int class = get_class(size);
+  void *ptr = free_list[class];
+  if(ptr){
+    // FIFO
+    // while(GET_NEXT_FREE(ptr)) ptr = GET_NEXT_FREE(ptr);
+    // SET_NEXT_FREE(ptr, bp);
+    // SET_NEXT_FREE(bp, 0);
+    // SET_PREV_FREE(bp, ptr);
+    // LIFO
+    SET_NEXT_FREE(bp, ptr);
+    SET_PREV_FREE(bp, 0);
+    SET_PREV_FREE(ptr, bp);
+    free_list[class] = bp;
   }
   else {
-    free_list[SIZE_NUM] = bp;
+    free_list[class] = bp;
     SET_NEXT_FREE(bp, 0);
     SET_PREV_FREE(bp, 0);
   }
@@ -167,42 +158,8 @@ static void remove_free(void *bp) {
   // printf("removing %p from free list\n", bp);
   // -------------------------------------------------
   size_t size = GET_SIZE(HDRP(bp));
-  // TODO : change this later 
-  for(int i = 0; i < SIZE_NUM; i++) {
-    if(size <= size_class[i]) {
-      void *ptr = free_list[i];
-      void *prev = NULL;
-      void *next = GET_NEXT_FREE(ptr);
-      while(ptr != bp) {
-        prev = ptr;
-        ptr = GET_NEXT_FREE(ptr);
-        next = GET_NEXT_FREE(ptr);
-      }
-      // alone
-      if(prev == NULL && next == NULL) {
-        free_list[i] = NULL;
-      }
-      // first
-      else if(prev == NULL) {
-        SET_PREV_FREE(next, 0);
-        free_list[i] = next;
-      }
-      // last
-      else if(next == NULL) {
-        SET_NEXT_FREE(prev, 0);
-      }
-      // middle
-      else {
-        SET_PREV_FREE(next, prev);
-        SET_NEXT_FREE(prev, next);
-      }
-      // --------------------- DEBUG ---------------------
-      // printf("removed %p from free list\n", bp);
-      // -------------------------------------------------
-      return;
-    }
-  }
-  void *ptr = free_list[SIZE_NUM];
+  int class = get_class(size);
+  void *ptr = free_list[class];
   void *prev = NULL;
   void *next = GET_NEXT_FREE(ptr);
   while(ptr != bp) {
@@ -212,12 +169,12 @@ static void remove_free(void *bp) {
   }
   // alone
   if(prev == NULL && next == NULL) {
-    free_list[SIZE_NUM] = NULL;
+    free_list[class] = NULL;
   }
   // first
   else if(prev == NULL) {
     SET_PREV_FREE(next, 0);
-    free_list[SIZE_NUM] = next;
+    free_list[class] = next;
   }
   // last
   else if(next == NULL) {
@@ -288,10 +245,11 @@ static void* extend_heap(size_t words)
 // TODO : optimize
 static void* find_fit(size_t asize)
 {
-  void* bp;
-  for(bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp))
-  {
-    if(GET_ALLOC(HDRP(bp)) == 0 && GET_SIZE(HDRP(bp)) >= asize) return bp;
+  int class = get_class(asize);
+  for(int i = class; i <= SIZE_NUM; i++) {
+    void* bp = free_list[i];
+    while(bp && asize > GET_SIZE(HDRP(bp))) bp = GET_NEXT_FREE(bp);
+    if(bp) return bp;
   }
   return NULL;
 }
@@ -356,8 +314,8 @@ void *mm_malloc(size_t size)
   // -------------------------------------------------
   char* bp;
   size_t asize = ALIGN(MAX(size, 16) + DSIZE);
-  // size_t extend_size = MAX(asize, CHUNKSIZE);
-  size_t extend_size = asize;
+  size_t extend_size = MAX(asize, CHUNKSIZE);
+  // size_t extend_size = asize;
   
   if(size == 0) return NULL;
   
