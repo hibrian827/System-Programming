@@ -9,7 +9,9 @@
  * For memory utilization, segregated Free List has been used
  * with the method of segregated fit to be more specific.
  * More details of the implementation is described below
- * in each header of the functions or macros. 
+ * in each header of the functions or macros. Some macros
+ * or function names have been implemented based on the implicit
+ * implementation from the textbook.
  * 
   */
 #include <stdio.h>
@@ -66,9 +68,9 @@
 // get the pointer of the next block of a block
 #define NEXT_BLKP(bp)         ((char *)(bp) + GET_SIZE((char *)(bp) - WSIZE))
 // get the pointer of the previous free block of a free block
-#define GET_PREV_FREE(bp)     ((void *)(*(unsigned int *) (bp)))
+#define GET_PREV_FREE(bp)     ((void *)(GET(bp)))
 // get the pointer of the next free block of a free block
-#define GET_NEXT_FREE(bp)     ((void *)(*(unsigned int *) (bp + WSIZE)))
+#define GET_NEXT_FREE(bp)     ((void *)(GET(bp + WSIZE)))
 // set the pointer of the previous free block of a free block as p
 #define SET_PREV_FREE(bp, p)  (*(unsigned int *) (bp) = (long)(p))
 // set the pointer of the next free block of a free block as p
@@ -114,15 +116,13 @@ static void* free_list[SIZE_NUM + 1];
  * the function stops printing and returns -1.
  * 
  */
-static int mm_check()
-{
+static int mm_check() {
   printf("\n************** starting heap check **************\n\n");
   void * start_p = mem_heap_lo();
   printf("heap starts in %p\n", start_p);
   void* bp;
   int wasFree = 0;
-  for(bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp))
-  {
+  for(bp = heap_listp; GET_SIZE(HDRP(bp)) > 0; bp = NEXT_BLKP(bp)) {
     // print each blk
     printf("%p ---- header : size=%6d ----\n", HDRP(bp), GET_SIZE(HDRP(bp)));
     if(GET_ALLOC(HDRP(bp))) printf("%p |          allocate          |\n", bp);
@@ -211,7 +211,7 @@ static void add_free(void* bp) {
   size_t size = GET_SIZE(HDRP(bp));
   int class = get_class(size);
   void *ptr = free_list[class];
-  if(ptr){
+  if(ptr) {
     SET_NEXT_FREE(bp, ptr);
     SET_PREV_FREE(bp, 0);
     SET_PREV_FREE(ptr, bp);
@@ -299,8 +299,7 @@ static void remove_free(void *bp) {
  * is returned.
  * 
  */
-static void* coalesce(void * bp)
-{
+static void* coalesce(void * bp) {
   size_t size = GET_SIZE(HDRP(bp));
   void *next = NEXT_BLKP(bp);
   void *prev = PREV_BLKP(bp);
@@ -348,8 +347,7 @@ static void* coalesce(void * bp)
  * had failed, NULL is returned.
  * 
  */
-static void* extend_heap(size_t words)
-{
+static void* extend_heap(size_t words) {
   char * bp;
   size_t size;
   size = (words % 2 == 1) ? (words + 1) * WSIZE : words * WSIZE;
@@ -381,8 +379,7 @@ static void* extend_heap(size_t words)
  * until the very end, NULL is returned.
  * 
  */
-static void* find_fit(size_t asize)
-{
+static void* find_fit(size_t asize) {
   int class = get_class(asize);
   for(int i = class; i <= SIZE_NUM; i++) {
     void* bp = free_list[i];
@@ -409,14 +406,12 @@ static void* find_fit(size_t asize)
  * added to the free list. 
  * 
  */
-static void place(void *bp, size_t asize)
-{
-  // --------------------- DEBUG ---------------------
+static void place(void *bp, size_t asize) {
+  // -------------------- DEBUG ---------------------
   // printf("[ACTION] allocated %d to %p\n", asize, bp);
   // -------------------------------------------------
   size_t csize = GET_SIZE(HDRP(bp));
-  if((csize - asize) >= 2 * DSIZE)
-  {
+  if((csize - asize) >= 2 * DSIZE) {
     remove_free(bp);
     PUT(HDRP(bp), PACK(asize, 1));
     PUT(FTRP(bp), PACK(asize, 1));
@@ -425,7 +420,7 @@ static void place(void *bp, size_t asize)
     PUT(FTRP(bp), PACK(csize-asize, 0));
     add_free(bp);
   }
-  else{
+  else {
     remove_free(bp);
     PUT(HDRP(bp), PACK(csize, 1));
     PUT(FTRP(bp), PACK(csize, 1));
@@ -461,8 +456,7 @@ static void place(void *bp, size_t asize)
  * returned, and 0 is returned if else.
  * 
  */
-int mm_init(void)
-{
+int mm_init(void) {
   // --------------------- DEBUG ---------------------
   // printf("----------------------------- starting initialization -----------------------------\n\n");
   // -------------------------------------------------
@@ -497,8 +491,7 @@ int mm_init(void)
  * returned. NULL is returned if there is any problem allocating.
  * 
  */
-void *mm_malloc(size_t size)
-{
+void *mm_malloc(size_t size) {
   // --------------------- DEBUG ---------------------
   // printf("[ACTION] allocating %d\n", size);
   // -------------------------------------------------
@@ -534,8 +527,7 @@ void *mm_malloc(size_t size)
  * free list. If ptr is NULL, it does nothing.
  * 
  */
-void mm_free(void *ptr)
-{
+void mm_free(void *ptr) {
   // --------------------- DEBUG ---------------------
   // printf("[ACTION] freeing %p\n", ptr);
   // -------------------------------------------------
@@ -569,17 +561,16 @@ void mm_free(void *ptr)
  * it just allocates a new block, and if size is 0, it just frees the block.
  * 
  */
-void *mm_realloc(void *ptr, size_t size)
-{
+void *mm_realloc(void *ptr, size_t size) {
   // --------------------- DEBUG ---------------------
   // printf("[ACTION] reallocating %p to %d\n", ptr, size);
   // -------------------------------------------------
   void *newptr;
-  if(ptr == NULL){
+  if(ptr == NULL) {
     newptr = mm_malloc(size);
     return newptr;
   }
-  if(size == 0){
+  if(size == 0) {
     mm_free(ptr);
     return NULL;
   }
