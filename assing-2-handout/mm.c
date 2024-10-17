@@ -43,7 +43,7 @@
 // chunk size for heap's first initialization
 #define CHUNKSIZE             (1 << 12)
 // the number of size classes
-#define SIZE_NUM 10
+#define SIZE_NUM 11
 
 // max value between 2 values
 #define MAX(x, y)             ((x) > (y) ? (x) : (y))
@@ -86,7 +86,7 @@
 // pointer of the starting point of heap
 static char *heap_listp;
 // array of size classes
-static int size_class[SIZE_NUM] = {1 << 5, 1 << 6, 1 << 7, 1 << 8, 1 << 9, 1 << 10, 1 << 11, 1 << 12, 1 << 13, 1 << 14};
+static int size_class[SIZE_NUM] = {1 << 5, 1 << 6, 1 << 7, 1 << 8, 1 << 9, 1 << 10, 1 << 11, 1 << 12, 1 << 13, 1 << 14, 1 << 15};
 /* 
  * free list - array of pointers of the first free block for each size class
  * 
@@ -205,9 +205,6 @@ static int get_class(int asize) {
  * 
  */
 static void add_free(void* bp) {
-  // --------------------- DEBUG ---------------------
-  // printf("adding %p with %d to free list\n", bp, GET_SIZE(HDRP(bp)));
-  // -------------------------------------------------
   size_t size = GET_SIZE(HDRP(bp));
   int class = get_class(size);
   void *ptr = free_list[class];
@@ -222,9 +219,6 @@ static void add_free(void* bp) {
     SET_NEXT_FREE(bp, 0);
     SET_PREV_FREE(bp, 0);
   }
-  // --------------------- DEBUG ---------------------
-  // printf("added %p to free list\n", bp);
-  // -------------------------------------------------
   return;
 }
 
@@ -244,9 +238,6 @@ static void add_free(void* bp) {
  * 
  */
 static void remove_free(void *bp) {
-  // --------------------- DEBUG ---------------------
-  // printf("removing %p from free list\n", bp);
-  // -------------------------------------------------
   size_t size = GET_SIZE(HDRP(bp));
   int class = get_class(size);
   void *ptr = free_list[class];
@@ -275,9 +266,6 @@ static void remove_free(void *bp) {
     SET_PREV_FREE(next, prev);
     SET_NEXT_FREE(prev, next);
   }
-  // --------------------- DEBUG ---------------------
-  // printf("removed %p from free list\n", bp);
-  // -------------------------------------------------
   return;
 }
 
@@ -356,9 +344,6 @@ static void* extend_heap(size_t words) {
   PUT(HDRP(bp), PACK(size, 0));
   PUT(FTRP(bp), PACK(size, 0));
   PUT(HDRP(NEXT_BLKP(bp)), PACK(0, 1));
-  // --------------------- DEBUG ---------------------
-  // printf("extended heap\n");
-  // -------------------------------------------------
   return coalesce(bp);
 }
 
@@ -407,9 +392,6 @@ static void* find_fit(size_t asize) {
  * 
  */
 static void place(void *bp, size_t asize) {
-  // -------------------- DEBUG ---------------------
-  // printf("[ACTION] allocated %d to %p\n", asize, bp);
-  // -------------------------------------------------
   size_t csize = GET_SIZE(HDRP(bp));
   if((csize - asize) >= 2 * DSIZE) {
     remove_free(bp);
@@ -425,9 +407,6 @@ static void place(void *bp, size_t asize) {
     PUT(HDRP(bp), PACK(csize, 1));
     PUT(FTRP(bp), PACK(csize, 1));
   }
-  // --------------------- DEBUG ---------------------
-  // mm_check();
-  // -------------------------------------------------
 }
 
 /* 
@@ -457,9 +436,6 @@ static void place(void *bp, size_t asize) {
  * 
  */
 int mm_init(void) {
-  // --------------------- DEBUG ---------------------
-  // printf("----------------------------- starting initialization -----------------------------\n\n");
-  // -------------------------------------------------
   for(int i = 0; i <= SIZE_NUM; i++) free_list[i] = 0;
   heap_listp = mem_sbrk(4 * WSIZE);
   if(heap_listp == (void *) -1) return -1;
@@ -470,9 +446,6 @@ int mm_init(void) {
   heap_listp += 2 * WSIZE;
   if(extend_heap(DSIZE) == NULL) return -1;
   if(extend_heap(CHUNKSIZE / WSIZE) == NULL) return -1;
-  // --------------------- DEBUG ---------------------
-  // mm_check();
-  // -------------------------------------------------
   return 0;
 }
 
@@ -492,9 +465,6 @@ int mm_init(void) {
  * 
  */
 void *mm_malloc(size_t size) {
-  // --------------------- DEBUG ---------------------
-  // printf("[ACTION] allocating %d\n", size);
-  // -------------------------------------------------
   char* bp;
   size_t asize = ALIGN(MAX(size + DSIZE, 16));
   size_t extend_size = MAX(asize, CHUNKSIZE);
@@ -528,9 +498,6 @@ void *mm_malloc(size_t size) {
  * 
  */
 void mm_free(void *ptr) {
-  // --------------------- DEBUG ---------------------
-  // printf("[ACTION] freeing %p\n", ptr);
-  // -------------------------------------------------
   if(ptr == NULL) return;
   size_t size = GET_SIZE(HDRP(ptr));
   PUT(HDRP(ptr), PACK(size, 0));
@@ -538,10 +505,6 @@ void mm_free(void *ptr) {
   SET_PREV_FREE(ptr, 0);
   SET_NEXT_FREE(ptr, 0);
   coalesce(ptr);
-  // --------------------- DEBUG ---------------------
-  // printf("[ACTION] freed %p\n", ptr);
-  // mm_check();
-  // -------------------------------------------------
 }
 
 /*
@@ -562,9 +525,6 @@ void mm_free(void *ptr) {
  * 
  */
 void *mm_realloc(void *ptr, size_t size) {
-  // --------------------- DEBUG ---------------------
-  // printf("[ACTION] reallocating %p to %d\n", ptr, size);
-  // -------------------------------------------------
   void *newptr;
   if(ptr == NULL) {
     newptr = mm_malloc(size);
@@ -596,9 +556,5 @@ void *mm_realloc(void *ptr, size_t size) {
     memcpy(newptr, ptr, copySize);
     mm_free(ptr);
   }
-  // --------------------- DEBUG ---------------------
-  // printf("[ACTION] reallocated %p to %d\n", ptr, size);
-  // mm_check();
-  // -------------------------------------------------
   return newptr;
 }
