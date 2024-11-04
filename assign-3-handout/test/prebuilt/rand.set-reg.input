@@ -1,0 +1,15 @@
+help
+regs
+break 0x121d
+break 0x11c9
+continue
+get rax
+get rbx
+get eflags
+get rip
+get eflags
+set eflags 0x242
+get eflags
+continue
+continue
+quit

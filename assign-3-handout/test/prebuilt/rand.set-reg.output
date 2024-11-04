@@ -1,0 +1,37 @@
+Congrats! You got this right!
+[*] Tracer with pid=1277
+[*] [step 1] rip=7ffff7fd0103 child_status=1407
+>>> [*] Available commands: 
+[*] 	 regs | get [REG] | set [REG]
+[*] 	 read [addr] [size] | write [addr] [value] [size]
+[*] 	 step | continue | break [addr]
+[*] 	 help
+>>> [*] HANDLE CMD: regs
+	rax=0x0 rbx=0x0 rcx=0x0 rdx=0x0 
+	rbp=0x0 rsp=0x7fffffffdf70 rsi=0x0 rdi=0x7fffffffdf70 
+	r8=0x0 r9=0x0 r10=0x0 r11=0x0 
+	r12=0x0 r13=0x0 r14=0x0 r15=0x0 
+	rip=0x7ffff7fd0103 eflags=0x202 
+>>> [*] HANDLE CMD: break [121d][55555555521d]
+>>> [*] HANDLE CMD: break [11c9][5555555551c9]
+>>> [*] HANDLE CMD: continue
+[*] [step 2] rip=55555555521e child_status=1407
+[*] 	 FOUND MATCH BP: [0] [55555555521d][74]
+>>> [*] HANDLE CMD: get [rax]
+	rax=0x59a6a622 
+>>> [*] HANDLE CMD: get [rbx]
+	rbx=0x555555555270 
+>>> [*] HANDLE CMD: get [eflags]
+	eflags=0xa93 
+>>> [*] HANDLE CMD: get [rip]
+	rip=0x55555555521d 
+>>> [*] HANDLE CMD: get [eflags]
+	eflags=0xa93 
+>>> [*] HANDLE CMD: set [eflags] [0x242]
+>>> [*] HANDLE CMD: get [eflags]
+	eflags=0x242 
+>>> [*] HANDLE CMD: continue
+[*] [step 3] rip=5555555551ca child_status=1407
+[*] 	 FOUND MATCH BP: [1] [5555555551c9][f3]
+>>> [*] HANDLE CMD: continue
+[*] Exited in 4 steps with status=0

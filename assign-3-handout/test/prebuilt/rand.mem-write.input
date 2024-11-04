@@ -1,0 +1,11 @@
+help
+step
+read 0x4010 4
+break 0x1255
+break 0x11c9
+continue
+write 0x4010 0xaabbccdd 4
+read 0x4010 4
+continue
+continue
+quit

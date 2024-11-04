@@ -1,0 +1,25 @@
+Congrats! You got this right!
+[*] Tracer with pid=1259
+[*] [step 1] rip=7ffff7fd0103 child_status=1407
+>>> [*] Available commands: 
+[*] 	 regs | get [REG] | set [REG]
+[*] 	 read [addr] [size] | write [addr] [value] [size]
+[*] 	 step | continue | break [addr]
+[*] 	 help
+>>> [*] HANDLE CMD: step
+[*] [step 2] rip=7ffff7fd0df0 child_status=1407
+>>> [*] HANDLE CMD: read [4010][555555558010] [4]
+	 555555558010 34 12 00 00 
+>>> [*] HANDLE CMD: break [1255][555555555255]
+>>> [*] HANDLE CMD: break [11c9][5555555551c9]
+>>> [*] HANDLE CMD: continue
+[*] [step 3] rip=555555555256 child_status=1407
+[*] 	 FOUND MATCH BP: [0] [555555555255][e8]
+>>> [*] HANDLE CMD: write [4010][555555558010] [aabbccdd]<= 0x4
+>>> [*] HANDLE CMD: read [4010][555555558010] [4]
+	 555555558010 dd cc bb aa 
+>>> [*] HANDLE CMD: continue
+[*] [step 4] rip=5555555551ca child_status=1407
+[*] 	 FOUND MATCH BP: [1] [5555555551c9][f3]
+>>> [*] HANDLE CMD: continue
+[*] Exited in 5 steps with status=0

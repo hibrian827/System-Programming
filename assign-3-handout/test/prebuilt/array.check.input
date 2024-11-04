@@ -1,0 +1,10 @@
+read 4240 1
+read 4140 2
+read 4040 3
+break 0x1177
+continue
+read 4240 40
+read 4140 100
+read 4040 100
+quit
+
