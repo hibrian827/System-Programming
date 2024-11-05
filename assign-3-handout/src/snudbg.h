@@ -30,6 +30,8 @@ typedef struct breakpoint breakpoint_t;
 void set_registers(int pid, struct user_regs_struct *tracee_regs);
 void get_registers(int pid, struct user_regs_struct *tracee_regs);
 
+void get_reg(char* reg, struct user_regs_struct *regs);
+
 #define TODO_UNUSED(x) (void)(x)
 
 #endif

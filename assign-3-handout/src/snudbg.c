@@ -191,6 +191,79 @@ void handle_set(char *reg_name, unsigned long value,
     return;
 }
 
+void get_reg(char* reg, struct user_regs_struct *regs) {
+    if(strcmp(reg, "rax") == 0) {
+      printf("\t");
+      PRINT_REG(rax);
+    }
+    else if(strcmp(reg, "rbx") == 0) {
+      printf("\t");
+      PRINT_REG(rbx);
+    }
+    else if(strcmp(reg, "rcx") == 0) {
+      printf("\t");
+      PRINT_REG(rcx);
+    }
+    else if(strcmp(reg, "rdx") == 0) {
+      printf("\t");
+      PRINT_REG(rdx);
+    }
+    else if(strcmp(reg, "rdi") == 0) {
+      printf("\t");
+      PRINT_REG(rdi);
+    }
+    else if(strcmp(reg, "rsi") == 0) {
+      printf("\t");
+      PRINT_REG(rsi);
+    }
+    else if(strcmp(reg, "rbp") == 0) {
+      printf("\t");
+      PRINT_REG(rbp);
+    }
+    else if(strcmp(reg, "rsp") == 0) {
+      printf("\t");
+      PRINT_REG(rsp);
+    }
+    else if(strcmp(reg, "r8") == 0) {
+      printf("\t");
+      PRINT_REG(r8);
+    }
+    else if(strcmp(reg, "r9") == 0) {
+      printf("\t");
+      PRINT_REG(r9);
+    }
+    else if(strcmp(reg, "r10") == 0) {
+      printf("\t");
+      PRINT_REG(r10);
+    }
+    else if(strcmp(reg, "r11") == 0) {
+      printf("\t");
+      PRINT_REG(r11);
+    }
+    else if(strcmp(reg, "r12") == 0) {
+      printf("\t");
+      PRINT_REG(r12);
+    }
+    else if(strcmp(reg, "r13") == 0) {
+      printf("\t");
+      PRINT_REG(r13);
+    }
+    else if(strcmp(reg, "r14") == 0) {
+      printf("\t");
+      PRINT_REG(r14);
+    }
+    else if(strcmp(reg, "r15") == 0) {
+      printf("\t");
+      PRINT_REG(r15);
+    }
+    else if(strcmp(reg, "rip") == 0) {
+      printf("\t");
+      PRINT_REG(rip);
+    }
+    else WARN("No such register as %s", reg);
+    printf("\n");
+}
+
 void prompt_user(int child_pid, struct user_regs_struct *regs,
                  ADDR_T baseaddr) {
     TODO_UNUSED(child_pid);
@@ -214,11 +287,21 @@ void prompt_user(int child_pid, struct user_regs_struct *regs,
         }
 
         if(strcmp("get", action)==0) {
-            // TODO
+            char arg[10];
+            scanf("%10s", arg);
+            LOG("HANDLE CMD: get [%s]\n", arg);
+            get_reg(arg, regs);
+            continue;
         }
 
         if(strcmp("set", action)==0) {
             // TODO
+            char arg[10];
+            unsigned long long val;
+            scanf("%10s", arg);
+            scanf("%llu", &val);
+            LOG("HANDLE CMD: set [%s] to [%llu]\n", arg, val);
+            continue;
         }
 
         if(strcmp("read", action)==0 || strcmp("r", action)==0) {
@@ -231,10 +314,15 @@ void prompt_user(int child_pid, struct user_regs_struct *regs,
 
         if(strcmp("break", action)==0 || strcmp("b", action)==0) {
             // TODO
+            ADDR_T addr;
+            scanf("%llx", &addr);
+            LOG("HANDLE CMD: break [%llx][%llx]\n", addr, baseaddr + addr);
         }
 
         if(strcmp("step", action)==0 || strcmp("s", action)==0) {
-            // TODO
+            LOG("HANDLE CMD: step\n");
+            set_debug_state(child_pid, SINGLE_STEP);
+            break;
         }
 
         if(strcmp("continue", action)==0 || strcmp("c", action)==0) {
@@ -279,9 +367,7 @@ void set_registers(int pid, struct user_regs_struct *regs) {
 */
 ADDR_T get_image_baseaddr(int pid) {
     hr_procmaps** procmap = construct_procmaps(pid);
-    ADDR_T baseaddr = 0;
-    // TODO
-    TODO_UNUSED(procmap);
+    ADDR_T baseaddr = (procmap[0])->addr_begin;
     return baseaddr;
 }
 
