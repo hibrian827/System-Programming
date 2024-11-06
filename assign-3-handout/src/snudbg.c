@@ -129,11 +129,23 @@ void set_debug_state(int pid, enum debugging_state state) {
    The data read from @pid will be written to @buf.
 */
 void handle_read(int pid, ADDR_T addr, unsigned char *buf, size_t len) {
-    // TODO: Use the function dump_addr_in_hex() to print the memory data
-    TODO_UNUSED(pid);
-    TODO_UNUSED(addr);
-    TODO_UNUSED(buf);
-    TODO_UNUSED(len);
+    size_t i = 0;
+    for(i = 0; i < len / 8; i++) {
+        long data = ptrace(PTRACE_PEEKDATA, pid, (void *)(addr + i * 8), NULL);
+        for(size_t j = 0; j < 8; j++) {
+            char temp = (data >> (j * 8)) & 0xff;
+            memcpy(buf + i * 8 + j, &temp, sizeof(char));
+        }
+    }
+    if(len % 8 != 0) {
+        long data = ptrace(PTRACE_PEEKDATA, pid, (void *)(addr + i * 8), NULL);
+        for(size_t j = 0; j < len % 8; j++) {
+            char temp = (data >> (j * 8)) & 0xff;
+            memcpy(buf + i * 8 + j, &temp, sizeof(char));
+        }
+    }
+    dump_addr_in_hex(addr, buf, len);
+    free(buf);
     return;
 }
 
@@ -183,86 +195,32 @@ void handle_get(char *reg_name, struct user_regs_struct *regs) {
 */
 void handle_set(char *reg_name, unsigned long value,
                 struct user_regs_struct *regs, int pid) {
-    // TODO
-    TODO_UNUSED(reg_name);
-    TODO_UNUSED(value);
-    TODO_UNUSED(regs);
-    TODO_UNUSED(pid);
+    if(strcmp(reg_name, "rax") == 0) regs->rax = value;
+    else if(strcmp(reg_name, "rbx") == 0) regs->rbx = value;
+    else if(strcmp(reg_name, "rcx") == 0) regs->rcx = value;
+    else if(strcmp(reg_name, "rdx") == 0) regs->rdx = value;
+    else if(strcmp(reg_name, "rdi") == 0) regs->rdi = value;
+    else if(strcmp(reg_name, "rsi") == 0) regs->rsi = value;
+    else if(strcmp(reg_name, "rbp") == 0) regs->rbp = value;
+    else if(strcmp(reg_name, "rsp") == 0) regs->rsp = value;
+    else if(strcmp(reg_name, "r8") == 0) regs->r8 = value;
+    else if(strcmp(reg_name, "r9") == 0) regs->r9 = value;
+    else if(strcmp(reg_name, "r10") == 0) regs->r10 = value;
+    else if(strcmp(reg_name, "r11") == 0) regs->r11 = value;
+    else if(strcmp(reg_name, "r12") == 0) regs->r12 = value;
+    else if(strcmp(reg_name, "r13") == 0) regs->r13 = value;
+    else if(strcmp(reg_name, "r14") == 0) regs->r14 = value;
+    else if(strcmp(reg_name, "r15") == 0) regs->r15 = value;
+    else if(strcmp(reg_name, "rip") == 0) regs->rip = value;
+    else if(strcmp(reg_name, "eflags") == 0) regs->eflags = value;
+    else {
+      WARN("No such register as %s\n", reg_name);
+      return;
+    }
+    set_registers(pid, regs);
     return;
 }
 
-void get_reg(char* reg, struct user_regs_struct *regs) {
-    if(strcmp(reg, "rax") == 0) {
-      printf("\t");
-      PRINT_REG(rax);
-    }
-    else if(strcmp(reg, "rbx") == 0) {
-      printf("\t");
-      PRINT_REG(rbx);
-    }
-    else if(strcmp(reg, "rcx") == 0) {
-      printf("\t");
-      PRINT_REG(rcx);
-    }
-    else if(strcmp(reg, "rdx") == 0) {
-      printf("\t");
-      PRINT_REG(rdx);
-    }
-    else if(strcmp(reg, "rdi") == 0) {
-      printf("\t");
-      PRINT_REG(rdi);
-    }
-    else if(strcmp(reg, "rsi") == 0) {
-      printf("\t");
-      PRINT_REG(rsi);
-    }
-    else if(strcmp(reg, "rbp") == 0) {
-      printf("\t");
-      PRINT_REG(rbp);
-    }
-    else if(strcmp(reg, "rsp") == 0) {
-      printf("\t");
-      PRINT_REG(rsp);
-    }
-    else if(strcmp(reg, "r8") == 0) {
-      printf("\t");
-      PRINT_REG(r8);
-    }
-    else if(strcmp(reg, "r9") == 0) {
-      printf("\t");
-      PRINT_REG(r9);
-    }
-    else if(strcmp(reg, "r10") == 0) {
-      printf("\t");
-      PRINT_REG(r10);
-    }
-    else if(strcmp(reg, "r11") == 0) {
-      printf("\t");
-      PRINT_REG(r11);
-    }
-    else if(strcmp(reg, "r12") == 0) {
-      printf("\t");
-      PRINT_REG(r12);
-    }
-    else if(strcmp(reg, "r13") == 0) {
-      printf("\t");
-      PRINT_REG(r13);
-    }
-    else if(strcmp(reg, "r14") == 0) {
-      printf("\t");
-      PRINT_REG(r14);
-    }
-    else if(strcmp(reg, "r15") == 0) {
-      printf("\t");
-      PRINT_REG(r15);
-    }
-    else if(strcmp(reg, "rip") == 0) {
-      printf("\t");
-      PRINT_REG(rip);
-    }
-    else WARN("No such register as %s", reg);
-    printf("\n");
-}
 
 void prompt_user(int child_pid, struct user_regs_struct *regs,
                  ADDR_T baseaddr) {
@@ -287,25 +245,38 @@ void prompt_user(int child_pid, struct user_regs_struct *regs,
         }
 
         if(strcmp("get", action)==0) {
-            char arg[10];
-            scanf("%10s", arg);
-            LOG("HANDLE CMD: get [%s]\n", arg);
-            get_reg(arg, regs);
+            char reg[10];
+            scanf("%10s", reg);
+            LOG("HANDLE CMD: get [%s]\n", reg);
+            handle_get(reg, regs);
             continue;
         }
 
         if(strcmp("set", action)==0) {
-            // TODO
-            char arg[10];
+            char reg[10];
+            char hex[10];
             unsigned long long val;
-            scanf("%10s", arg);
-            scanf("%llu", &val);
-            LOG("HANDLE CMD: set [%s] to [%llu]\n", arg, val);
+            scanf("%10s", reg);
+            scanf("%10s", hex);
+            val = strtoull(hex, NULL, 16);
+            LOG("HANDLE CMD: set [%s] to [%llu]\n", reg, val);
+            handle_set(reg, val, regs, child_pid);
             continue;
         }
 
         if(strcmp("read", action)==0 || strcmp("r", action)==0) {
-            // TODO
+            char hex1[10];
+            char hex2[10];
+            ADDR_T addr;
+            unsigned long long size;
+            scanf("%10s", hex1);
+            scanf("%10s", hex2);
+            addr = strtoull(hex1, NULL, 16);
+            size = strtoull(hex2, NULL, 16);
+            unsigned char *res = malloc(size);
+            LOG("HANDLE CMD: read [%llx][%llx] [%llx]\n", addr, baseaddr + addr, size);
+            handle_read(child_pid, addr + baseaddr, res, size);
+            continue;
         }
 
         if(strcmp("write", action)==0 || strcmp("w", action)==0) {
@@ -354,9 +325,10 @@ void get_registers(int pid, struct user_regs_struct *regs) {
   Set the registers of @pid with @regs.
 */
 void set_registers(int pid, struct user_regs_struct *regs) {
-    // TODO
-    TODO_UNUSED(pid);
-    TODO_UNUSED(regs);
+    if (ptrace(PTRACE_SETREGS, pid, NULL, regs) == -1) {
+        perror("Error setting registers");
+        return;
+    }
 }
 
 
