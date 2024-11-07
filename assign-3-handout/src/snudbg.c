@@ -153,11 +153,31 @@ void handle_read(int pid, ADDR_T addr, unsigned char *buf, size_t len) {
    The data to be written is placed in @buf.
 */
 void handle_write(int pid, ADDR_T addr, unsigned char *buf, size_t len) {
-    // TODO
     TODO_UNUSED(pid);
-    TODO_UNUSED(addr);
-    TODO_UNUSED(buf);
-    TODO_UNUSED(len);
+    size_t i = 0;
+    char *res = malloc(len);
+    for(i = 0; i < len / 8; i++) {
+        char tmp_str[17];
+        strncpy(tmp_str, (char *)(buf + i * 16), 16);
+        unsigned long long tmp_hex = strtoull(tmp_str, NULL, 16);
+        printf("%llx\n", tmp_hex);
+        for(size_t j = 0; j < 8; j++) {
+            memcpy(res + i * 8 + j, &tmp_hex, sizeof(char));
+            tmp_hex = tmp_hex >> 8;
+        }
+    }
+    if(len % 8 != 0) {
+        size_t rem_bytes = len % 8;
+        char tmp_str[17];
+        strncpy(tmp_str, (char *)(buf + i * 16), 16);
+        unsigned long long tmp_hex = strtoull(tmp_str, NULL, 16);
+        for(size_t j = 0; j < rem_bytes; j++) {
+            memcpy(res + i * 8 + j, &tmp_hex, sizeof(char));
+            tmp_hex = tmp_hex >> 8;
+        }
+    }
+    dump_addr_in_hex(addr, res, len);
+    free(res);
     return;
 }
 
@@ -254,7 +274,7 @@ void prompt_user(int child_pid, struct user_regs_struct *regs,
 
         if(strcmp("set", action)==0) {
             char reg[10];
-            char hex[10];
+            char hex[11];
             unsigned long long val;
             scanf("%10s", reg);
             scanf("%10s", hex);
@@ -265,8 +285,8 @@ void prompt_user(int child_pid, struct user_regs_struct *regs,
         }
 
         if(strcmp("read", action)==0 || strcmp("r", action)==0) {
-            char hex1[10];
-            char hex2[10];
+            char hex1[11];
+            char hex2[11];
             ADDR_T addr;
             unsigned long long size;
             scanf("%10s", hex1);
@@ -282,25 +302,21 @@ void prompt_user(int child_pid, struct user_regs_struct *regs,
 
         if(strcmp("write", action)==0 || strcmp("w", action)==0) {
             // TODO
-            char hex1[10];
-            char hex2[10];
-            char hex3[10];
+            char hex1[11];
+            char hex2[MAX_RW + 2];
+            char hex3[11];
             ADDR_T addr;
+            unsigned char *val;
             unsigned long long size;
-            unsigned long long val;
             scanf("%10s", hex1);
-            scanf("%10s", hex2);
+            scanf("%s", hex2);
             scanf("%10s", hex3);
-            printf("%s\n", hex1);
-            printf("%s\n", hex2);
-            printf("%s\n", hex3);
             addr = strtoull(hex1, NULL, 16);
-            val = strtoull(hex2, NULL, 16);
+            if(strlen(hex2) > 2 && hex2[0] == '0' && hex2[1] == 'x') val = (unsigned char *)(hex2 + 2);
+            else val = (unsigned char *)hex2;
             size = strtoull(hex3, NULL, 16);
-            unsigned char *res = malloc(size);
-            LOG("HANDLE CMD: write [%llx][%llx] [%llx]<= 0x%llx\n", addr, baseaddr + addr, val, size);
-            handle_write(child_pid, addr + baseaddr, res, size);
-            free(res);
+            LOG("HANDLE CMD: write [%llx][%llx] [%s]<= 0x%llx\n", addr, baseaddr + addr, val, size);
+            handle_write(child_pid, addr + baseaddr, val, size);
             continue;
         }
 
