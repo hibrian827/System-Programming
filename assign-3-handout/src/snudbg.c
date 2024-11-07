@@ -145,7 +145,6 @@ void handle_read(int pid, ADDR_T addr, unsigned char *buf, size_t len) {
         }
     }
     dump_addr_in_hex(addr, buf, len);
-    free(buf);
     return;
 }
 
@@ -235,6 +234,7 @@ void prompt_user(int child_pid, struct user_regs_struct *regs,
         scanf("%1024s", action);
 
         if(strcmp("regs", action)==0) {
+            LOG("HANDLE CMD: regs");
             handle_regs(regs);
             continue;
         }
@@ -276,11 +276,32 @@ void prompt_user(int child_pid, struct user_regs_struct *regs,
             unsigned char *res = malloc(size);
             LOG("HANDLE CMD: read [%llx][%llx] [%llx]\n", addr, baseaddr + addr, size);
             handle_read(child_pid, addr + baseaddr, res, size);
+            free(res);
             continue;
         }
 
         if(strcmp("write", action)==0 || strcmp("w", action)==0) {
             // TODO
+            char hex1[10];
+            char hex2[10];
+            char hex3[10];
+            ADDR_T addr;
+            unsigned long long size;
+            unsigned long long val;
+            scanf("%10s", hex1);
+            scanf("%10s", hex2);
+            scanf("%10s", hex3);
+            printf("%s\n", hex1);
+            printf("%s\n", hex2);
+            printf("%s\n", hex3);
+            addr = strtoull(hex1, NULL, 16);
+            val = strtoull(hex2, NULL, 16);
+            size = strtoull(hex3, NULL, 16);
+            unsigned char *res = malloc(size);
+            LOG("HANDLE CMD: write [%llx][%llx] [%llx]<= 0x%llx\n", addr, baseaddr + addr, val, size);
+            handle_write(child_pid, addr + baseaddr, res, size);
+            free(res);
+            continue;
         }
 
         if(strcmp("break", action)==0 || strcmp("b", action)==0) {
