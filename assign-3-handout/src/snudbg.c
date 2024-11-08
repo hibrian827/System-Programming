@@ -153,31 +153,29 @@ void handle_read(int pid, ADDR_T addr, unsigned char *buf, size_t len) {
    The data to be written is placed in @buf.
 */
 void handle_write(int pid, ADDR_T addr, unsigned char *buf, size_t len) {
-    TODO_UNUSED(pid);
     size_t i = 0;
-    char *res = malloc(len);
     for(i = 0; i < len / 8; i++) {
         char tmp_str[17];
         strncpy(tmp_str, (char *)(buf + i * 16), 16);
+        tmp_str[16] = '\0';
         unsigned long long tmp_hex = strtoull(tmp_str, NULL, 16);
-        printf("%llx\n", tmp_hex);
-        for(size_t j = 0; j < 8; j++) {
-            memcpy(res + i * 8 + j, &tmp_hex, sizeof(char));
-            tmp_hex = tmp_hex >> 8;
+        if (ptrace(PTRACE_POKEDATA, pid, addr + 8 * i, (void *)tmp_hex) == -1) {
+            perror("Error writing values to memory");
+            return;
         }
     }
     if(len % 8 != 0) {
-        size_t rem_bytes = len % 8;
         char tmp_str[17];
-        strncpy(tmp_str, (char *)(buf + i * 16), 16);
+        strncpy(tmp_str, (char *)(buf + i * 16), (len % 8) * 2);
+        // for(int j = (len % 8) * 2; j < 16 ; j++) tmp_str[j] = '0';
+        // tmp_str[16] = '\0';
         unsigned long long tmp_hex = strtoull(tmp_str, NULL, 16);
-        for(size_t j = 0; j < rem_bytes; j++) {
-            memcpy(res + i * 8 + j, &tmp_hex, sizeof(char));
-            tmp_hex = tmp_hex >> 8;
+        printf("%llx\n", tmp_hex);
+        if (ptrace(PTRACE_POKEDATA, pid, addr + 8 * i, (void *)tmp_hex) == -1) {
+            perror("Error writing values to memory");
+            return;
         }
     }
-    dump_addr_in_hex(addr, res, len);
-    free(res);
     return;
 }
 
@@ -254,7 +252,7 @@ void prompt_user(int child_pid, struct user_regs_struct *regs,
         scanf("%1024s", action);
 
         if(strcmp("regs", action)==0) {
-            LOG("HANDLE CMD: regs");
+            LOG("HANDLE CMD: regs\n");
             handle_regs(regs);
             continue;
         }
