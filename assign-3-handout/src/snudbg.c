@@ -158,7 +158,7 @@ void handle_write(int pid, ADDR_T addr, unsigned char *buf, size_t len) {
         char tmp_str[17];
         strncpy(tmp_str, (char *)(buf + i * 16), 16);
         tmp_str[16] = '\0';
-        unsigned long long tmp_hex = strtoull(tmp_str, NULL, 16);
+        long tmp_hex = strtoull(tmp_str, NULL, 16);
         if (ptrace(PTRACE_POKEDATA, pid, addr + 8 * i, (void *)tmp_hex) == -1) {
             perror("Error writing values to memory");
             return;
@@ -169,8 +169,7 @@ void handle_write(int pid, ADDR_T addr, unsigned char *buf, size_t len) {
         strncpy(tmp_str, (char *)(buf + i * 16), (len % 8) * 2);
         // for(int j = (len % 8) * 2; j < 16 ; j++) tmp_str[j] = '0';
         // tmp_str[16] = '\0';
-        unsigned long long tmp_hex = strtoull(tmp_str, NULL, 16);
-        printf("%llx\n", tmp_hex);
+        long tmp_hex = strtoull(tmp_str, NULL, 16);
         if (ptrace(PTRACE_POKEDATA, pid, addr + 8 * i, (void *)tmp_hex) == -1) {
             perror("Error writing values to memory");
             return;
@@ -183,9 +182,14 @@ void handle_write(int pid, ADDR_T addr, unsigned char *buf, size_t len) {
    Install the software breakpoint at @addr to pid @pid.
 */
 void handle_break(int pid, ADDR_T addr) {
-    // TODO
-    TODO_UNUSED(pid);
-    TODO_UNUSED(addr);
+    long inst = ptrace(PTRACE_PEEKDATA, pid, (void *)(addr), NULL);
+    breakpoint_t bp = {addr, (unsigned char)(inst & 0xff)};
+    bps[num_bps] = bp;
+    long bp_inst = (inst & ~0xff) | 0xcc;
+    if (ptrace(PTRACE_POKEDATA, pid, addr, (void *)bp_inst) == -1) {
+        perror("Error making breakpoint");
+        return;
+    }
 }
 
 #define CMPGET_REG(REG_TO_CMP)                   \
@@ -319,10 +323,15 @@ void prompt_user(int child_pid, struct user_regs_struct *regs,
         }
 
         if(strcmp("break", action)==0 || strcmp("b", action)==0) {
-            // TODO
             ADDR_T addr;
             scanf("%llx", &addr);
-            LOG("HANDLE CMD: break [%llx][%llx]\n", addr, baseaddr + addr);
+            if(num_bps >= MAX_BPS) WARN("Too many breakpoints");
+            else {
+              LOG("HANDLE CMD: break [%llx][%llx]\n", addr, baseaddr + addr);
+              handle_break(child_pid, addr + baseaddr);
+              num_bps++;
+            }
+            continue;
         }
 
         if(strcmp("step", action)==0 || strcmp("s", action)==0) {
@@ -333,6 +342,9 @@ void prompt_user(int child_pid, struct user_regs_struct *regs,
 
         if(strcmp("continue", action)==0 || strcmp("c", action)==0) {
             // TODO
+            LOG("HANDLE CMD: continue\n");
+            set_debug_state(child_pid, NON_STOP);
+            break;
         }
 
         if(strcmp("quit", action)==0 || strcmp("q", action)==0) {
