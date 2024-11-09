@@ -118,7 +118,7 @@ void set_debug_state(int pid, enum debugging_state state) {
             die("Error tracing syscalls");
         }
     } else if (state == NON_STOP) {
-        // TODO
+        ptrace(PTRACE_CONT, pid, NULL, NULL);
     }
     return;
 }
@@ -160,8 +160,7 @@ void handle_write(int pid, ADDR_T addr, unsigned char *buf, size_t len) {
         tmp_str[16] = '\0';
         long tmp_hex = strtoull(tmp_str, NULL, 16);
         if (ptrace(PTRACE_POKEDATA, pid, addr + 8 * i, (void *)tmp_hex) == -1) {
-            perror("Error writing values to memory");
-            return;
+            die("Error writing values to memory");
         }
     }
     if(len % 8 != 0) {
@@ -171,8 +170,7 @@ void handle_write(int pid, ADDR_T addr, unsigned char *buf, size_t len) {
         // tmp_str[16] = '\0';
         long tmp_hex = strtoull(tmp_str, NULL, 16);
         if (ptrace(PTRACE_POKEDATA, pid, addr + 8 * i, (void *)tmp_hex) == -1) {
-            perror("Error writing values to memory");
-            return;
+            die("Error writing values to memory");
         }
     }
     return;
@@ -187,8 +185,7 @@ void handle_break(int pid, ADDR_T addr) {
     bps[num_bps] = bp;
     long bp_inst = (inst & ~0xff) | 0xcc;
     if (ptrace(PTRACE_POKEDATA, pid, addr, (void *)bp_inst) == -1) {
-        perror("Error making breakpoint");
-        return;
+        die("Error making breakpoint");
     }
 }
 
@@ -373,8 +370,7 @@ void get_registers(int pid, struct user_regs_struct *regs) {
 */
 void set_registers(int pid, struct user_regs_struct *regs) {
     if (ptrace(PTRACE_SETREGS, pid, NULL, regs) == -1) {
-        perror("Error setting registers");
-        return;
+        die("Error setting registers");
     }
 }
 
@@ -395,9 +391,21 @@ ADDR_T get_image_baseaddr(int pid) {
   This includes to restore the original value at the breakpoint address.
 */
 void handle_break_post(int pid, struct user_regs_struct *regs) {
-    // TODO
-    TODO_UNUSED(pid);
-    TODO_UNUSED(regs);
+    for(int i = 0; i < MAX_BPS; i++) {
+        unsigned long long addr = bps[i].addr;
+        unsigned char orig_val = bps[i].orig_value;
+        if(addr == regs->rip - 1) {
+            LOG("\tFOUND MATCH BP: [%d] [%llx][%02x]\n", i, addr, orig_val);
+            long inst = ptrace(PTRACE_PEEKDATA, pid, (void *)(addr), NULL);
+            long restore_inst = (inst & ~0xff) | (long)orig_val;
+            if(ptrace(PTRACE_POKEDATA, pid, addr, (void *)restore_inst) == -1) die("Error restoring orginal value");
+            if(ptrace(PTRACE_SINGLESTEP, pid, NULL, NULL) < 0) die("Error tracing syscalls");
+            if(ptrace(PTRACE_GETREGS, pid, NULL, regs) < 0) die("Error getting registers");
+            long bp_inst = (inst & ~0xff) | 0xcc;
+            if(ptrace(PTRACE_POKEDATA, pid, addr, (void *)bp_inst) == -1) die("Error restoring breakpoint");
+            break;
+        }
+    }
 }
 
 
