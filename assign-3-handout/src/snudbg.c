@@ -339,19 +339,6 @@ void prompt_user(int child_pid, struct user_regs_struct *regs,
             // TODO
             LOG("HANDLE CMD: continue\n");
             set_debug_state(child_pid, NON_STOP);
-            int child_status;
-            waitpid(child_pid, &child_status, 0);
-            if (WIFSTOPPED(child_status) && WSTOPSIG(child_status) == SIGTRAP) {
-                if(ptrace(PTRACE_GETREGS, child_pid, NULL, regs)<0) die("Error getting registers");
-                for(int i = 0; i < num_bps; i++) {
-                    unsigned long long addr = bps[i].addr;
-                    unsigned char orig_val = bps[i].orig_value;
-                    if(addr == regs->rip - 1) {
-                        LOG("\tFOUND MATCH BP: [%d] [%llx][%02x]\n", i, addr, orig_val);
-                    }
-                }
-                return;
-            }
             break;
         }
 
@@ -408,11 +395,11 @@ void handle_break_post(int pid, struct user_regs_struct *regs) {
         if(addr == regs->rip - 1) {
             LOG("\tFOUND MATCH BP: [%d] [%llx][%02x]\n", i, addr, orig_val);
             long bp_inst = ptrace(PTRACE_PEEKDATA, pid, (void *)(addr), NULL);
-            printf("%lx\n", bp_inst);
             long restore_inst = (bp_inst & ~0xff) | (long)orig_val;
-            printf("%lx\n", restore_inst);
             if(ptrace(PTRACE_POKEDATA, pid, addr, (void *)restore_inst) == -1) die("Error restoring orginal value");
-            if(ptrace(PTRACE_SINGLESTEP, pid, NULL, NULL) < 0) die("Error tracing syscalls");
+            regs->rip = addr;
+            if(ptrace(PTRACE_SETREGS, pid, NULL, regs) == -1) die("Error setting registers");
+            // if(ptrace(PTRACE_SINGLESTEP, pid, NULL, NULL) < 0) die("Error tracing syscalls");
             // if(ptrace(PTRACE_GETREGS, pid, NULL, regs) < 0) die("Error getting registers");
             // if(ptrace(PTRACE_POKEDATA, pid, addr, (void *)bp_inst) == -1) die("Error restoring breakpoint");
             return;
