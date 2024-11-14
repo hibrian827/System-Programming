@@ -153,26 +153,44 @@ void handle_read(int pid, ADDR_T addr, unsigned char *buf, size_t len) {
    The data to be written is placed in @buf.
 */
 void handle_write(int pid, ADDR_T addr, unsigned char *buf, size_t len) {
-    size_t i = 0;
-    for(i = 0; i < len / 8; i++) {
-        char tmp_str[17];
-        strncpy(tmp_str, (char *)(buf + i * 16), 16);
-        tmp_str[16] = '\0';
-        long tmp_hex = strtoull(tmp_str, NULL, 16);
-        if (ptrace(PTRACE_POKEDATA, pid, addr + 8 * i, (void *)tmp_hex) == -1) {
-            die("Error writing values to memory");
-        }
+    // ------------------------------------------------------------------------------
+    // size_t i = 0;
+    // for(i = 0; i < len / 8; i++) {
+    //     char tmp_str[17];
+    //     strncpy(tmp_str, (char *)(buf + i * 16), 16);
+    //     tmp_str[16] = '\0';
+    //     long tmp_hex = strtoull(tmp_str, NULL, 16);
+    //     if (ptrace(PTRACE_POKEDATA, pid, addr + 8 * i, (void *)tmp_hex) == -1) {
+    //         die("Error writing values to memory");
+    //     }
+    // }
+    // if(len % 8 != 0) {
+    //     char tmp_str[17];
+    //     strncpy(tmp_str, (char *)(buf + i * 16), (len % 8) * 2);
+    //     // for(int j = (len % 8) * 2; j < 16 ; j++) tmp_str[j] = '0';
+    //     // tmp_str[16] = '\0';
+    //     long tmp_hex = strtoull(tmp_str, NULL, 16);
+    //     if (ptrace(PTRACE_POKEDATA, pid, addr + 8 * i, (void *)tmp_hex) == -1) {
+    //         die("Error writing values to memory");
+    //     }
+    // }
+    // ------------------------------------------------------------------------------
+    char res[17];
+    res[16] = '\x0';
+    size_t i;
+    for (i = len * 2; i >= 16; i -= 16) {
+        for(size_t j = 0; j < 16; j++) res[j] = buf[i - j - 1];
+        printf("%s\n", res);
     }
     if(len % 8 != 0) {
-        char tmp_str[17];
-        strncpy(tmp_str, (char *)(buf + i * 16), (len % 8) * 2);
-        // for(int j = (len % 8) * 2; j < 16 ; j++) tmp_str[j] = '0';
-        // tmp_str[16] = '\0';
-        long tmp_hex = strtoull(tmp_str, NULL, 16);
-        if (ptrace(PTRACE_POKEDATA, pid, addr + 8 * i, (void *)tmp_hex) == -1) {
-            die("Error writing values to memory");
-        }
+        // long data = ptrace(PTRACE_PEEKDATA, pid, (void *)(addr + i * 8), NULL);
+        printf("%llx\n", addr + i * 4 + len % 8);
+        for(size_t j = 0; j < (len % 8) * 2; j++) res[j] = buf[i - j - 1];
+        res[(len % 8) * 2] = '\x0';
+        printf("%s\n", res);
     }
+    TODO_UNUSED(pid);
+    TODO_UNUSED(addr);
     return;
 }
 
