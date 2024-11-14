@@ -175,18 +175,28 @@ void handle_write(int pid, ADDR_T addr, unsigned char *buf, size_t len) {
     //     }
     // }
     // ------------------------------------------------------------------------------
+    char temp[17];
     char res[17];
+    temp[16] = '\x0';
     res[16] = '\x0';
     size_t i;
-    for (i = len * 2; i >= 16; i -= 16) {
-        for(size_t j = 0; j < 16; j++) res[j] = buf[i - j - 1];
+    for(i = 0; i < len / 8; i++) {
+        strncpy(temp, (char *)(buf + len * 2 - (i + 1) * 16), 16);
+        for(int j = 0; j < 16; j += 2) {
+          res[j] = temp[16 - j - 2];
+          res[j + 1] = temp[16 - j - 1];
+        }
         printf("%s\n", res);
     }
     if(len % 8 != 0) {
-        // long data = ptrace(PTRACE_PEEKDATA, pid, (void *)(addr + i * 8), NULL);
-        printf("%llx\n", addr + i * 4 + len % 8);
-        for(size_t j = 0; j < (len % 8) * 2; j++) res[j] = buf[i - j - 1];
-        res[(len % 8) * 2] = '\x0';
+        long data = ptrace(PTRACE_PEEKDATA, pid, (void *)(addr + i * 8), NULL);
+        strncpy(temp, (char *)(buf), (len % 8) * 2);
+        for(size_t j = (len % 8) * 2; j < 16 ; j += 2) sprintf(temp + j, "%02x\n", (char)((data >> ((j / 2) * 8)) & 0xff));
+        temp[16] = '\x0';
+        for(int j = 0; j < 16; j += 2) {
+          res[j] = temp[16 - j - 2];
+          res[j + 1] = temp[16 - j - 1];
+        }
         printf("%s\n", res);
     }
     TODO_UNUSED(pid);
