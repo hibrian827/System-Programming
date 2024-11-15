@@ -182,15 +182,16 @@ void handle_write(int pid, ADDR_T addr, unsigned char *buf, size_t len) {
     size_t i;
     for(i = 0; i < len / 8; i++) {
         strncpy(temp, (char *)(buf + len * 2 - (i + 1) * 16), 16);
-        for(int j = 0; j < 16; j += 2) {
-          res[j] = temp[16 - j - 2];
-          res[j + 1] = temp[16 - j - 1];
+        long word = strtoul(temp, NULL, 16);
+        if (ptrace(PTRACE_POKEDATA, pid, addr + 8 * i, (void *)word) == -1) {
+            die("Error writing values to memory");
         }
-        printf("%s\n", res);
+        // printf("%s\n", res);
     }
     if(len % 8 != 0) {
-        long data = ptrace(PTRACE_PEEKDATA, pid, (void *)(addr + i * 8), NULL);
         strncpy(temp, (char *)(buf), (len % 8) * 2);
+        long data = ptrace(PTRACE_PEEKDATA, pid, (void *)(addr + i * 8), NULL);
+        printf("%08lx\n", data);
         for(size_t j = (len % 8) * 2; j < 16 ; j += 2) sprintf(temp + j, "%02x\n", (char)((data >> ((j / 2) * 8)) & 0xff));
         temp[16] = '\x0';
         for(int j = 0; j < 16; j += 2) {
