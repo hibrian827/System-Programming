@@ -399,9 +399,6 @@ void handle_break_post(int pid, struct user_regs_struct *regs) {
             if(ptrace(PTRACE_POKEDATA, pid, addr, (void *)restore_inst) == -1) die("Error restoring orginal value");
             regs->rip = addr;
             if(ptrace(PTRACE_SETREGS, pid, NULL, regs) == -1) die("Error setting registers");
-            // if(ptrace(PTRACE_SINGLESTEP, pid, NULL, NULL) < 0) die("Error tracing syscalls");
-            // if(ptrace(PTRACE_GETREGS, pid, NULL, regs) < 0) die("Error getting registers");
-            // if(ptrace(PTRACE_POKEDATA, pid, addr, (void *)bp_inst) == -1) die("Error restoring breakpoint");
             return;
         }
     }
