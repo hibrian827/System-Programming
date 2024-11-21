@@ -1,0 +1,9 @@
+/bin/echo -e
+
+/bin/echo -e tsh> /bin/ls -l -i README
+/bin/ls -l -i README
+
+/bin/echo -e
+
+/bin/echo -e tsh> /bin/ls -l -i README &
+/bin/ls -l -i README &

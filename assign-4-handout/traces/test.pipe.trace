@@ -1,0 +1,3 @@
+/bin/cat README | /bin/wc
+
+/bin/cat README | /bin/wc -c | /bin/wc -m | /bin/wc -l
