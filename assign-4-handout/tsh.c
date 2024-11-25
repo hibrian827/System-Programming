@@ -163,22 +163,22 @@ int main(int argc, char **argv)
     /* Execute the shell's read/eval loop */
     while (1) {
 
-	/* Read shell line */
-	if (emit_prompt) {
-	    printf("%s", prompt);
-	    fflush(stdout);
-	}
-	if ((fgets(shline, MAXLINE, stdin) == NULL) && ferror(stdin))
-	    app_error("fgets error");
-	if (feof(stdin)) { /* End of file (ctrl-d) */
-	    fflush(stdout);
-	    exit(0);
-	}
+      /* Read shell line */
+      if (emit_prompt) {
+          printf("%s", prompt);
+          fflush(stdout);
+      }
+      if ((fgets(shline, MAXLINE, stdin) == NULL) && ferror(stdin))
+          app_error("fgets error");
+      if (feof(stdin)) { /* End of file (ctrl-d) */
+          fflush(stdout);
+          exit(0);
+      }
 
-	/* Evaluate the shell line */
-	eval(shline);
-	fflush(stdout);
-	fflush(stdout);
+      /* Evaluate the shell line */
+      eval(shline);
+      fflush(stdout);
+      fflush(stdout);
     }
 
     exit(0); /* control never reaches here */
@@ -191,8 +191,7 @@ void handle_cmd(cmd_t *cmd) {
     int bg = cmd->bg;
 
     // https://github.com/robotmlg/simple-shell/blob/master/shell.c
-    if (argv[0] == NULL)
-	return;   /* ignore empty lines */
+    if (argv[0] == NULL) return;   /* ignore empty lines */
 
     if (builtin_cmd(argv)) {
         return;
@@ -258,9 +257,11 @@ void handle_cmd(cmd_t *cmd) {
 
 void handle_pipe_child(cmd_t *cmd) {
     // Handle pipe for child
+    // TODO
 }
 
 void handle_pipe_parent(cmd_t *cmd) {
+    // TODO
 }
 
 /*
@@ -279,6 +280,11 @@ void handle_pipe_parent(cmd_t *cmd) {
 */
 void eval(char *shline)
 {
+    cmd_t * cmd = alloc_cmd();
+    int bg = parseline(shline, cmd);
+    if(bg) {}
+    else {}
+    free_cmd(cmd);
     return;
 }
 
@@ -365,6 +371,7 @@ int parseline(const char *shline, cmd_t *cmd) {
  */
 int builtin_cmd(char **argv)
 {
+    // TODO
     return 0;     /* not a builtin command */
 }
 
@@ -373,6 +380,7 @@ int builtin_cmd(char **argv)
  */
 void do_bgfg(char **argv)
 {
+    //TODO
     return;
 }
 
@@ -381,6 +389,7 @@ void do_bgfg(char **argv)
  */
 void waitfg(pid_t pid)
 {
+    //TODO
     return;
 }
 
@@ -397,6 +406,7 @@ void waitfg(pid_t pid)
  */
 void sigchld_handler(int sig)
 {
+    //TODO
     return;
 }
 
@@ -407,6 +417,7 @@ void sigchld_handler(int sig)
  */
 void sigint_handler(int sig)
 {
+    //TODO
     return;
 }
 
@@ -417,6 +428,7 @@ void sigint_handler(int sig)
  */
 void sigtstp_handler(int sig)
 {
+    //TODO
     return;
 }
 
@@ -645,8 +657,6 @@ void sigquit_handler(int sig)
  */
 cmd_t *alloc_cmd(void) {
     cmd_t *cmd = malloc(sizeof(cmd_t));
-
-
     return cmd;
 }
 
@@ -654,6 +664,7 @@ cmd_t *alloc_cmd(void) {
  * free_cmd - Free the command structure
  */
 void free_cmd(cmd_t *c) {
+    free(c);
 }
 
 /*
@@ -661,5 +672,24 @@ void free_cmd(cmd_t *c) {
  * not enable this debugging print when submitting the code
  */
 void print_cmd(cmd_t *c) {
+    // int argc;
+    // char *argv[MAXARGS];
+    // int is_head;
+    // int bg;
+    // int pid;
+    // int pipe[2];
+    // struct cmd_t *next;
+    // char shline[MAXLINE];
+    printf("------------ printing cmd ------------\n");
+    printf("number of args: %d\n", c->argc);
+    printf("args:");
+    for(int i = 0; i < c->argc; i++) printf(" %s", c->argv[i]);
+    printf("\n");
+    printf("is head: %d\n", c->is_head);
+    printf("is bg: %d\n", c->bg);
+    printf("pid: %d\n", c->pid);
+    printf("pipe: %d %d\n", c->pipe[0], c->pipe[1]);
+    printf("shell: %s\n", c->shline);
+    printf("--------------------------------------\n");
 }
 

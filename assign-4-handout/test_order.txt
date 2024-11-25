@@ -1,0 +1,19 @@
+1. test.terminate
+2. test.quit
+3. test.fg
+4. test.bg
+5. test.jobs
+6. test.sigint-fg
+7. test.sigint-fg2
+8. test.sigtstp-fg
+9. test.bg-builtin
+10. test.fg-builtin
+11. test.sigint-all
+12. test.sigtstp-all
+13. test.restart
+14. test.error-handle
+15. test.all
+16. test.sigint-sigtstp
+
+test.ls
+test.pipe
