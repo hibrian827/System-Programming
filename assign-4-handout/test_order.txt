@@ -17,3 +17,5 @@
 
 test.ls
 test.pipe
+
+python3 ./tools/run-test.py test.terminate test.quit test.fg test.bg test.jobs test.sigint-fg test.sigint-fg2 test.sigtstp-fg test.bg-builtin test.fg-builtin test.sigint-all test.sigtstp-all test.restart test.error-handle test.all test.sigint-sigtstp test.ls test.pipe

@@ -133,18 +133,18 @@ int main(int argc, char **argv)
     /* Parse the shell line */
     while ((c = getopt(argc, argv, "hvp")) != EOF) {
         switch (c) {
-        case 'h':             /* print help message */
-            usage();
-	    break;
-        case 'v':             /* emit additional diagnostic info */
-            verbose = 1;
-	    break;
-        case 'p':             /* don't print a prompt */
-            emit_prompt = 0;  /* handy for automatic testing */
-	    break;
-	default:
-            usage();
-	}
+            case 'h':             /* print help message */
+                usage();
+            break;
+            case 'v':             /* emit additional diagnostic info */
+                verbose = 1;
+            break;
+            case 'p':             /* don't print a prompt */
+                emit_prompt = 0;  /* handy for automatic testing */
+            break;
+            default:
+                usage();
+	      }
     }
 
     /* Install the signal handlers */
@@ -283,8 +283,16 @@ void eval(char *shline)
     cmd_t * cmd = alloc_cmd();
     int bg = parseline(shline, cmd);
     if(!builtin_cmd(cmd->argv)) {
-      if(bg) do_bgfg(cmd->argv);
-      else ;
+        if(bg) ;
+        else {
+            pid_t pid = fork();
+            if(pid == 0) {
+                execve(argv[0], argv, NULL);
+            }
+            else {
+
+            }
+        }
     }
     free_cmd(cmd);
     return;
@@ -370,6 +378,16 @@ int parseline(const char *shline, cmd_t *cmd) {
 int builtin_cmd(char **argv)
 {
     // TODO
+    char * cmd = argv[0];
+    if(!strcmp(cmd, "quit")) {
+      exit(0);
+      return 1;
+    }
+    else if(!strcmp(cmd, "jobs")){return 1;}
+    else if(!strcmp(cmd, "bg") || !strcmp(cmd, "fg")){
+        do_bgfg(argv);
+        return 1;
+    }
     return 0;     /* not a builtin command */
 }
 

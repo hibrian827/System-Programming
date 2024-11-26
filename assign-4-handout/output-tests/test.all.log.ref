@@ -1,0 +1,28 @@
+#
+# trace15.txt - Putting it all together
+#
+tsh> ./bogus
+./bogus: Command not found
+tsh> ./apps/myspin 10
+Job [1] (11979) terminated by signal 2
+tsh> ./apps/myspin 3 &
+[1] (12019) ./apps/myspin 3 &
+tsh> ./apps/myspin 4 &
+[2] (12021) ./apps/myspin 4 &
+tsh> jobs
+[1] (12019) Running ./apps/myspin 3 &
+[2] (12021) Running ./apps/myspin 4 &
+tsh> fg %1
+Job [1] (12019) stopped by signal 20
+tsh> jobs
+[1] (12019) Stopped ./apps/myspin 3 &
+[2] (12021) Running ./apps/myspin 4 &
+tsh> bg %3
+%3: No such job
+tsh> bg %1
+[1] (12019) ./apps/myspin 3 &
+tsh> jobs
+[1] (12019) Running ./apps/myspin 3 &
+[2] (12021) Running ./apps/myspin 4 &
+tsh> fg %1
+tsh> quit
