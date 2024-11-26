@@ -282,8 +282,10 @@ void eval(char *shline)
 {
     cmd_t * cmd = alloc_cmd();
     int bg = parseline(shline, cmd);
-    if(bg) {}
-    else {}
+    if(!builtin_cmd(cmd->argv)) {
+      if(bg) do_bgfg(cmd->argv);
+      else ;
+    }
     free_cmd(cmd);
     return;
 }
@@ -308,38 +310,34 @@ int parseline(const char *shline, cmd_t *cmd) {
 
     strcpy(buf, shline);
     buf[strlen(buf)-1] = ' ';  /* replace trailing '\n' with space */
-    while (*buf && (*buf == ' ')) /* ignore leading spaces */
-	buf++;
+    while (*buf && (*buf == ' ')) buf++; /* ignore leading spaces */
 
     cmd->argc = 0;
     if (*buf == '\'') {
-	buf++;
-	delim = strchr(buf, '\'');
+        buf++;  
+        delim = strchr(buf, '\'');
     }
     else {
-	delim = strchr(buf, ' ');
+	      delim = strchr(buf, ' ');
     }
 
     while (delim) {
-	cmd->argv[cmd->argc] = buf;
+	      cmd->argv[cmd->argc] = buf;
         cmd->argc = cmd->argc + 1;
-	*delim = '\0';
-	buf = delim + 1;
-	while (*buf && (*buf == ' ')) /* ignore spaces */
-	       buf++;
-
+        *delim = '\0';
+        buf = delim + 1;
+        while (*buf && (*buf == ' ')) buf++;/* ignore spaces */
         if (*buf == '|') {
             buf++;
             break;
         }
-
-	if (*buf == '\'') {
-	    buf++;
-	    delim = strchr(buf, '\'');
-	}
-	else {
-	    delim = strchr(buf, ' ');
-	}
+        if (*buf == '\'') {
+            buf++;
+            delim = strchr(buf, '\'');
+        }
+        else {
+            delim = strchr(buf, ' ');
+        }
     }
     cmd->argv[cmd->argc] = NULL;
 
@@ -689,7 +687,7 @@ void print_cmd(cmd_t *c) {
     printf("is bg: %d\n", c->bg);
     printf("pid: %d\n", c->pid);
     printf("pipe: %d %d\n", c->pipe[0], c->pipe[1]);
-    printf("shell: %s\n", c->shline);
+    printf("shell: %s", c->shline);
     printf("--------------------------------------\n");
 }
 
