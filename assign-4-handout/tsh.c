@@ -281,16 +281,22 @@ void handle_pipe_parent(cmd_t *cmd) {
 void eval(char *shline)
 {
     cmd_t * cmd = alloc_cmd();
-    int bg = parseline(shline, cmd);
+    parseline(shline, cmd);
+    char *env[] = {NULL};
     if(!builtin_cmd(cmd->argv)) {
-        if(bg) ;
+        pid_t pid = fork();
+        if(pid == 0) {
+            setpgid(0, 0);
+            execve(cmd->argv[0], cmd->argv, env);
+        }
         else {
-            pid_t pid = fork();
-            if(pid == 0) {
-                execve(argv[0], argv, NULL);
+            if(!cmd->bg) {
+                addjob(jobs, pid, FG, cmd->shline);
+                waitfg(pid);
             }
             else {
-
+                addjob(jobs, pid, BG, cmd->shline);
+                printf("[%d] (%d) %s", pid2jid(pid), pid, cmd->shline);
             }
         }
     }
@@ -380,10 +386,13 @@ int builtin_cmd(char **argv)
     // TODO
     char * cmd = argv[0];
     if(!strcmp(cmd, "quit")) {
-      exit(0);
-      return 1;
+        exit(0);
+        return 1;
     }
-    else if(!strcmp(cmd, "jobs")){return 1;}
+    else if(!strcmp(cmd, "jobs")) {
+        listjobs(jobs);
+        return 1;
+    }
     else if(!strcmp(cmd, "bg") || !strcmp(cmd, "fg")){
         do_bgfg(argv);
         return 1;
@@ -405,7 +414,7 @@ void do_bgfg(char **argv)
  */
 void waitfg(pid_t pid)
 {
-    //TODO
+    while(jobs[pid2jid(pid)].state != UNDEF && jobs[pid2jid(pid)].state != ST) sleep(1);
     return;
 }
 
@@ -422,7 +431,9 @@ void waitfg(pid_t pid)
  */
 void sigchld_handler(int sig)
 {
-    //TODO
+    int status;
+    pid_t pid = waitpid(-1, &status, WNOHANG);
+    if(jobs[pid2jid(pid)].state == UNDEF) deletejob(jobs, pid);
     return;
 }
 
@@ -433,7 +444,10 @@ void sigchld_handler(int sig)
  */
 void sigint_handler(int sig)
 {
-    //TODO
+    pid_t pid = fgpid(jobs);
+    if(pid == 0) return;
+    printf("Job [%d] (%d) terminated by signal %d\n", nextjid, pid, sig);
+    kill(pid, sig);
     return;
 }
 
@@ -444,7 +458,11 @@ void sigint_handler(int sig)
  */
 void sigtstp_handler(int sig)
 {
-    //TODO
+    pid_t pid = fgpid(jobs);
+    if(pid == 0) return;
+    printf("Job [%d] (%d) stopped by signal %d\n", nextjid, pid, sig);
+    jobs[pid2jid(pid)].state = ST;
+    // kill(pid, SIGTSTP);
     return;
 }
 
@@ -583,20 +601,21 @@ void listjobs(struct job_t *jobs)
 
     for (i = 0; i < MAXJOBS; i++) {
 	if (jobs[i].pid != 0) {
+      if(jobs[i].state == FG) continue;
 	    printf("[%d] (%d) ", jobs[i].jid, jobs[i].pid);
 	    switch (jobs[i].state) {
-		case BG:
-		    printf("Running ");
-		    break;
-		case FG:
-		    printf("Foreground ");
-		    break;
-		case ST:
-		    printf("Stopped ");
-		    break;
-	    default:
-		    printf("listjobs: Internal error: job[%d].state=%d ",
-			   i, jobs[i].state);
+      case BG:
+          printf("Running ");
+          break;
+      case FG:
+          printf("Foreground");
+          break;
+      case ST:
+          printf("Stopped ");
+          break;
+      default:
+		      printf("listjobs: Internal error: job[%d].state=%d ",
+			    i, jobs[i].state);
 	    }
 	    printf("%s", jobs[i].shline);
 	}

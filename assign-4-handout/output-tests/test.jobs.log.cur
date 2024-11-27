@@ -1,0 +1,10 @@
+#
+# trace05.txt - Process jobs builtin command.
+#
+[2] (165032) ./apps/myspin 2 &
+[4] (165034) ./apps/myspin 3 &
+tsh> ./apps/myspin 2 &
+[2] (165032) Running ./apps/myspin 2 &
+[4] (165034) Running ./apps/myspin 3 &
+tsh> ./apps/myspin 3 &
+tsh> jobs

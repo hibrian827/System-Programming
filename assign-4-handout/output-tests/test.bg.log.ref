@@ -1,0 +1,15 @@
+#
+# trace04.txt - Run a background job.
+#
+tsh> /usr/bin/ls -l
+Makefile
+README
+apps
+output-tests
+prepare-submit.sh
+test_order.txt
+tools
+traces
+tsh
+tsh.c
+tsh_ref
