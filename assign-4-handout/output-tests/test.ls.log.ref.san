@@ -1,0 +1,8 @@
+
+tsh> /bin/ls -l -i README
+120336 -rw-r--r-- 1 hibrian827 hibrian827 787 Nov 25 22:56 README
+
+[1] (PID 0) /bin/echo -e tsh> /bin/ls -l -i README &
+[2] (PID 1) /bin/ls -l -i README &
+tsh> /bin/ls -l -i README
+120336 -rw-r--r-- 1 hibrian827 hibrian827 787 Nov 25 22:56 README

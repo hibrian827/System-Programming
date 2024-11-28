@@ -1,0 +1,15 @@
+#
+# trace09.txt - Process bg builtin command
+#
+tsh> ./myspin 4 &
+[1] (46931) ./apps/myspin 4 &
+tsh> ./apps/myspin 5
+Job [2] (46933) stopped by signal 20
+tsh> jobs
+[1] (46931) Running ./apps/myspin 4 &
+[2] (46933) Stopped ./apps/myspin 5
+tsh> bg %2
+[2] (46933) ./apps/myspin 5
+tsh> jobs
+[1] (46931) Running ./apps/myspin 4 &
+[2] (46933) Running ./apps/myspin 5

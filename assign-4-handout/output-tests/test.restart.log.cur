@@ -1,0 +1,45 @@
+#
+# trace13.txt - Restart every stopped process in process group
+#
+tsh> ./apps/mysplit 4
+tsh> jobs
+Job [1] (47356) stopped by signal 20
+[1] (47356) Stopped ./apps/mysplit 4
+tsh> /bin/ps -ao stat,comm
+STAT COMMAND
+S+   bash
+S+   sh
+S+   sh
+Sl+  node
+Sl+  node
+Sl+  node
+Sl+  node
+Sl+  cpptools
+Sl+  node
+Sl+  cpptools-srv
+S+   python3
+S+   sdriver.pl
+S+   tsh
+T    mysplit
+T    mysplit
+R    ps
+tsh> fg %1
+tsh> /bin/ps -ao stat,comm
+STAT COMMAND
+S+   bash
+S+   sh
+S+   sh
+Sl+  node
+Sl+  node
+Sl+  node
+Sl+  node
+Sl+  cpptools
+Sl+  node
+Sl+  cpptools-srv
+S+   python3
+S+   sdriver.pl
+S+   tsh
+S+   sh
+S+   cpuUsage.sh
+S+   sleep
+R    ps
