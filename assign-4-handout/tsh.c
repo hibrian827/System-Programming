@@ -78,8 +78,6 @@ typedef struct cmd_t cmd_t;
 
 cmd_t *alloc_cmd(void);
 void free_cmd(cmd_t *);
-void print_cmd(cmd_t *);
-
 
 /* Function prototypes */
 
@@ -181,77 +179,6 @@ int main(int argc, char **argv)
     exit(0); /* control never reaches here */
 }
 
-void handle_cmd(cmd_t *cmd) {
-    pid_t pid;           /* process id */
-    sigset_t mask;       /* signal mask */
-    char **argv = cmd->argv;
-    int bg = cmd->bg;
-
-    // https://github.com/robotmlg/simple-shell/blob/master/shell.c
-    if (argv[0] == NULL) return;   /* ignore empty lines */
-
-    if (builtin_cmd(argv)) {
-        return;
-    }
-
-    /*
-     * This is a little tricky. Block SIGCHLD, SIGINT, and SIGTSTP
-     * signals until we can add the job to the job list. This
-     * eliminates some nasty races between adding a job to the job
-     * list and the arrival of SIGCHLD, SIGINT, and SIGTSTP signals.
-     */
-
-    if (sigemptyset(&mask) < 0)
-        unix_error("sigemptyset error");
-    if (sigaddset(&mask, SIGCHLD))
-        unix_error("sigaddset error");
-    if (sigaddset(&mask, SIGINT))
-        unix_error("sigaddset error");
-    if (sigaddset(&mask, SIGTSTP))
-        unix_error("sigaddset error");
-    if (sigprocmask(SIG_BLOCK, &mask, NULL) < 0)
-        unix_error("sigprocmask error");
-
-    /* Create a child process */
-    if ((pid = fork()) < 0)
-        unix_error("fork error");
-
-    if (pid == 0) {
-        /* Child process  */
-        /* Child unblocks signals */
-        sigprocmask(SIG_UNBLOCK, &mask, NULL);
-
-        /* Each new job must get a new process group ID
-           so that the kernel doesn't send ctrl-c and ctrl-z
-           signals to all of the shell's jobs */
-        if (setpgid(0, 0) < 0)
-            unix_error("setpgid error");
-
-
-        handle_pipe_child(cmd);
-
-        /* Now load and run the program in the new job */
-        if (execve(argv[0], argv, environ) < 0) {
-            printf("%s: Command not found\n", argv[0]);
-            exit(0);
-        }
-    } else {
-        /* Parent process */
-        /* Parent adds the job, and then unblocks signals so that
-           the signals handlers can run again */
-        addjob(jobs, pid, (bg == 1 ? BG : FG), cmd->shline);
-        sigprocmask(SIG_UNBLOCK, &mask, NULL);
-
-        handle_pipe_parent(cmd);
-
-        if (!bg)
-            waitfg(pid);
-        else
-            printf("[%d] (%d) %s", pid2jid(pid), pid, cmd->shline);
-
-    }
-}
-
 void handle_pipe_child(cmd_t *cmd) {
     if(cmd->pipe[PIPE_IN] != 0) dup2(cmd->pipe[PIPE_IN], STDIN_FILENO);
     if(cmd->pipe[PIPE_OUT] != 0) dup2(cmd->pipe[PIPE_OUT], STDOUT_FILENO);
@@ -298,7 +225,6 @@ void eval(char *shline)
     }
     for(int i = 0; i < cmd_cnt; i++){
         cmd_t *cmd = cmds[i];
-        // print_cmd(cmd);
         if(!builtin_cmd(cmd->argv)) {    
             sigset_t mask;     
             if(sigemptyset(&mask) < 0) unix_error("sigemptyset error");
@@ -428,7 +354,7 @@ int builtin_cmd(char **argv)
         do_bgfg(argv);
         return 1;
     }
-    return 0;     /* not a builtin command */
+    return 0;
 }
 
 /*
@@ -561,8 +487,7 @@ void clearjob(struct job_t *job) {
 void initjobs(struct job_t *jobs) {
     int i;
 
-    for (i = 0; i < MAXJOBS; i++)
-	clearjob(&jobs[i]);
+    for (i = 0; i < MAXJOBS; i++) clearjob(&jobs[i]);
 }
 
 /* maxjid - Returns largest allocated job ID */
@@ -724,8 +649,7 @@ handler_t *Signal(int signum, handler_t *handler)
     sigemptyset(&action.sa_mask); /* block sigs of type being handled */
     action.sa_flags = SA_RESTART; /* restart syscalls if possible */
 
-    if (sigaction(signum, &action, &old_action) < 0)
-	unix_error("Signal error");
+    if (sigaction(signum, &action, &old_action) < 0) unix_error("Signal error");
     return (old_action.sa_handler);
 }
 
@@ -753,29 +677,5 @@ cmd_t *alloc_cmd(void) {
  */
 void free_cmd(cmd_t *c) {
     free(c);
-}
-
-/*
- * print_cmd - Print the command structure for debugging. You should
- * not enable this debugging print when submitting the code
- */
-void print_cmd(cmd_t *c) {
-    // int argc;
-    // char *argv[MAXARGS];
-    // int is_head;
-    // int bg;
-    // int pid;
-    // int pipe[2];
-    // struct cmd_t *next;
-    // char shline[MAXLINE];
-    printf("------------ printing cmd ------------\n");
-    printf("number of args: %d\n", c->argc);
-    for(int i = 0; i < c->argc; i++) printf("arg %d : %s\n", i, c->argv[i]);
-    printf("is head: %d\n", c->is_head);
-    printf("is bg: %d\n", c->bg);
-    printf("pid: %d\n", c->pid);
-    printf("pipe: %d %d\n", c->pipe[PIPE_OUT], c->pipe[PIPE_IN]);
-    printf("shell: %s\n", c->shline);
-    printf("--------------------------------------\n");
 }
 
