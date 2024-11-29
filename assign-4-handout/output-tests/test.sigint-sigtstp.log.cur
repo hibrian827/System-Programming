@@ -3,8 +3,8 @@
 #     signals that come from other processes instead of the terminal.
 #
 tsh> ./apps/mystop 2
-Job [1] (47766) stopped by signal 20
+Job [1] (61632) stopped by signal 20
 tsh> jobs
-[1] (47766) Stopped ./apps/mystop 2
+[1] (61632) Stopped ./apps/mystop 2
 tsh> ./apps/myint 2
-Job [2] (47810) terminated by signal 2
+Job [2] (61677) terminated by signal 2

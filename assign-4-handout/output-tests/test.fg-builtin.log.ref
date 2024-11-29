@@ -2,10 +2,10 @@
 # trace10.txt - Process fg builtin command.
 #
 tsh> ./apps/myspin 4 &
-[1] (47061) ./apps/myspin 4 &
+[1] (60937) ./apps/myspin 4 &
 tsh> fg %1
-Job [1] (47061) stopped by signal 20
+Job [1] (60937) stopped by signal 20
 tsh> jobs
-[1] (47061) Stopped ./apps/myspin 4 &
+[1] (60937) Stopped ./apps/myspin 4 &
 tsh> fg %1
 tsh> jobs

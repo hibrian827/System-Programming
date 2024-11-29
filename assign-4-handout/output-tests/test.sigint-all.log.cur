@@ -2,7 +2,7 @@
 # trace11.txt - Forward SIGINT to every process in foreground process group
 #
 tsh> ./apps/mysplit 4
-Job [1] (47202) terminated by signal 2
+Job [1] (61077) terminated by signal 2
 tsh> /bin/ps -ao stat,comm
 STAT COMMAND
 S+   bash
@@ -13,7 +13,6 @@ Sl+  node
 Sl+  node
 Sl+  node
 Sl+  cpptools
-Sl+  node
 Sl+  cpptools-srv
 S+   python3
 S+   sdriver.pl

@@ -2,9 +2,9 @@
 # trace05.txt - Process jobs builtin command.
 #
 tsh> ./apps/myspin 2 &
-[1] (46615) ./apps/myspin 2 &
+[1] (60494) ./apps/myspin 2 &
 tsh> ./apps/myspin 3 &
-[2] (46617) ./apps/myspin 3 &
+[2] (60496) ./apps/myspin 3 &
 tsh> jobs
-[1] (46615) Running ./apps/myspin 2 &
-[2] (46617) Running ./apps/myspin 3 &
+[1] (60494) Running ./apps/myspin 2 &
+[2] (60496) Running ./apps/myspin 3 &

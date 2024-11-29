@@ -253,12 +253,13 @@ void handle_cmd(cmd_t *cmd) {
 }
 
 void handle_pipe_child(cmd_t *cmd) {
-    // Handle pipe for child
-    // TODO
+    if(cmd->pipe[PIPE_IN] != 0) dup2(cmd->pipe[PIPE_IN], STDIN_FILENO);
+    if(cmd->pipe[PIPE_OUT] != 0) dup2(cmd->pipe[PIPE_OUT], STDOUT_FILENO);
 }
 
 void handle_pipe_parent(cmd_t *cmd) {
-    // TODO
+    if(cmd->pipe[PIPE_IN] != 0) close(cmd->pipe[PIPE_IN]);
+    if(cmd->pipe[PIPE_OUT] != 0) close(cmd->pipe[PIPE_OUT]);
 }
 
 /*
@@ -277,39 +278,61 @@ void handle_pipe_parent(cmd_t *cmd) {
 */
 void eval(char *shline)
 {
-    cmd_t * cmd = alloc_cmd();
-    parseline(shline, cmd);
     char *env[] = {NULL};
-    if(!builtin_cmd(cmd->argv)) {    
-        sigset_t mask;       
-        if(sigemptyset(&mask) < 0) unix_error("sigemptyset error");
-        if(sigaddset(&mask, SIGCHLD)) unix_error("sigaddset error");
-        if(sigprocmask(SIG_BLOCK, &mask, NULL) < 0) unix_error("sigprocmask error");
-        pid_t pid = fork();
-        if(pid < 0) unix_error("fork error");
-        if(pid == 0) {
-            if(setpgid(0, 0) < 0) printf("setpgid error");
-            if(sigprocmask(SIG_UNBLOCK, &mask, NULL) < 0) unix_error("sigprocmask error");
-            handle_pipe_child(cmd);
-            if(execve(cmd->argv[0], cmd->argv, env) < 0) {
-                printf("%s: Command not found\n", cmd->argv[0]);
-                exit(0);
-            }
-        }
-        else {
-            if (sigprocmask(SIG_UNBLOCK, &mask, NULL) < 0) unix_error("sigprocmask error");
-            handle_pipe_parent(cmd);
-            if(!cmd->bg) {
-                addjob(jobs, pid, FG, cmd->shline);
-                waitfg(pid);
+    const char delim[] = "|";
+    int cmd_cnt = 0;
+    cmd_t **cmds = malloc(sizeof(cmd_t*) * MAXCMDS);
+    char* single_sh = strtok(shline, delim);
+    while(single_sh != NULL) {
+        cmds[cmd_cnt] = alloc_cmd();
+        parseline(single_sh, cmds[cmd_cnt]);
+        single_sh = strtok(NULL, delim);
+        cmd_cnt++;       
+    }
+    for(int i = 1; i < cmd_cnt; i++) {
+        int pipe_fd[2];
+        if(pipe(pipe_fd) < 0) unix_error("pipe error");
+        cmds[i - 1]->next = cmds[i];
+        cmds[i - 1]->pipe[PIPE_OUT] = pipe_fd[PIPE_OUT];
+        cmds[i]->pipe[PIPE_IN] = pipe_fd[PIPE_IN];
+    }
+    for(int i = 0; i < cmd_cnt; i++){
+        cmd_t *cmd = cmds[i];
+        // print_cmd(cmd);
+        if(!builtin_cmd(cmd->argv)) {    
+            sigset_t mask;     
+            if(sigemptyset(&mask) < 0) unix_error("sigemptyset error");
+            if(sigaddset(&mask, SIGCHLD)) unix_error("sigaddset error");
+            if(sigprocmask(SIG_BLOCK, &mask, NULL) < 0) unix_error("sigprocmask error");
+            pid_t pid = fork();
+            if(pid < 0) unix_error("fork error");
+            if(pid == 0) {
+                if(setpgid(0, 0) < 0) printf("setpgid error");
+                if(sigprocmask(SIG_UNBLOCK, &mask, NULL) < 0) unix_error("sigprocmask error");
+                handle_pipe_child(cmd);
+                if(execve(cmd->argv[0], cmd->argv, env) < 0) {
+                    printf("%s: Command not found\n", cmd->argv[0]);
+                    exit(0);
+                }
+                if(cmd->pipe[PIPE_OUT] != 0) close(cmd->pipe[PIPE_OUT]);
+                if(cmd->pipe[PIPE_IN] != 0) close(cmd->pipe[PIPE_IN]);
             }
             else {
-                addjob(jobs, pid, BG, cmd->shline);
-                printf("[%d] (%d) %s", pid2jid(pid), pid, cmd->shline);
+                if (sigprocmask(SIG_UNBLOCK, &mask, NULL) < 0) unix_error("sigprocmask error");
+                handle_pipe_parent(cmd);
+                if(!cmd->bg) {
+                    addjob(jobs, pid, FG, cmd->shline);
+                    waitfg(pid);
+                }
+                else {
+                    addjob(jobs, pid, BG, cmd->shline);
+                    printf("[%d] (%d) %s", pid2jid(pid), pid, cmd->shline);
+                }
             }
         }
     }
-    free_cmd(cmd);
+    for(int i = 0; i < cmd_cnt; i++) free_cmd(cmds[i]);
+    free(cmds);
     return;
 }
 
@@ -747,14 +770,12 @@ void print_cmd(cmd_t *c) {
     // char shline[MAXLINE];
     printf("------------ printing cmd ------------\n");
     printf("number of args: %d\n", c->argc);
-    printf("args:");
-    for(int i = 0; i < c->argc; i++) printf(" %s", c->argv[i]);
-    printf("\n");
+    for(int i = 0; i < c->argc; i++) printf("arg %d : %s\n", i, c->argv[i]);
     printf("is head: %d\n", c->is_head);
     printf("is bg: %d\n", c->bg);
     printf("pid: %d\n", c->pid);
-    printf("pipe: %d %d\n", c->pipe[0], c->pipe[1]);
-    printf("shell: %s", c->shline);
+    printf("pipe: %d %d\n", c->pipe[PIPE_OUT], c->pipe[PIPE_IN]);
+    printf("shell: %s\n", c->shline);
     printf("--------------------------------------\n");
 }
 

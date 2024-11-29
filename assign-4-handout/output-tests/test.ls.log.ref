@@ -1,8 +1,8 @@
 
 tsh> /bin/ls -l -i README
-120336 -rw-r--r-- 1 hibrian827 hibrian827 787 Nov 25 22:56 README
+63182 -rw-r--r-- 1 hibrian827 hibrian827 787 Nov 21 08:24 README
 
-[1] (47831) /bin/echo -e tsh> /bin/ls -l -i README &
-[2] (47832) /bin/ls -l -i README &
+[1] (61698) /bin/echo -e tsh> /bin/ls -l -i README &
+[2] (61699) /bin/ls -l -i README &
 tsh> /bin/ls -l -i README
-120336 -rw-r--r-- 1 hibrian827 hibrian827 787 Nov 25 22:56 README
+63182 -rw-r--r-- 1 hibrian827 hibrian827 787 Nov 21 08:24 README

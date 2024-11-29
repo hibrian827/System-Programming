@@ -4,7 +4,7 @@
 tsh> ./bogus
 ./bogus: Command not found
 tsh> ./apps/myspin 4 &
-[1] (47464) ./apps/myspin 4 &
+[1] (61338) ./apps/myspin 4 &
 tsh> fg
 fg command requires PID or %jobid argument
 tsh> bg
@@ -21,9 +21,9 @@ tsh> fg %2
 %2: No such job
 tsh> fg %1
 tsh> bg %2
-Job [1] (47464) stopped by signal 20
+Job [1] (61338) stopped by signal 20
 %2: No such job
 tsh> bg %1
-[1] (47464) ./apps/myspin 4 &
+[1] (61338) ./apps/myspin 4 &
 tsh> jobs
-[1] (47464) Running ./apps/myspin 4 &
+[1] (61338) Running ./apps/myspin 4 &
