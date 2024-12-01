@@ -1,9 +1,0 @@
-#
-# trace07.txt - Forward SIGINT only to foreground job.
-#
-tsh> ./apps/myspin 4 &
-[1] (60586) ./apps/myspin 4 &
-tsh> ./apps/myspin 5
-Job [2] (60588) terminated by signal 2
-tsh> jobs
-[1] (60586) Running ./apps/myspin 4 &
