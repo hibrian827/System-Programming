@@ -7,7 +7,6 @@ int main(int argc, char *argv[]) {
     infile = fopen(argv[1], "r");
   }
   while(fgets(buf, 1024, infile) != NULL) {
-    printf("----\n");
     fprintf(stdout, buf);
   }
 }
